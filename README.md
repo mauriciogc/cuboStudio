@@ -3,12 +3,16 @@
 Editor de figuras hechas de cubos (vóxeles) al estilo *Pokémon Quest* y *Crossy Road*, hecho con
 Three.js + Vite, sin frameworks. Todo corre en el navegador y se guarda solo.
 
+**Pruébalo:** https://mauriciogc.github.io/cuboStudio/
+
 ```bash
 npm install
-npm run dev       # http://localhost:5173
+npm run dev       # http://localhost:5173/cuboStudio/
 npm run build     # genera dist/ (sitio estático)
-npm run preview   # sirve dist/ en http://localhost:4173
+npm run preview   # sirve dist/ en http://localhost:4173/cuboStudio/
 ```
+
+Cada push a `main` se publica solo en GitHub Pages (`.github/workflows/deploy.yml`).
 
 ## Primeros pasos
 
@@ -37,7 +41,23 @@ npm run preview   # sirve dist/ en http://localhost:4173
 - **Pegado a la cara real:** si construyes sobre una pieza aplastada o desplazada, el cubo nuevo queda
   pegado a su cara, sin dejar hueco.
 - **Opacidad** por pieza (10–100 %) para agua o vidrio: se puede construir dentro de las piezas transparentes.
+- **Brilla:** la pieza da luz de su color e ilumina lo que tiene cerca (lámparas, fuego, lava, ojos…).
+  Como la opacidad, se aplica a lo que construyes, pintas o tienes seleccionado.
 - **Encimar piezas** está permitido (también varias en la misma casilla).
+
+## El panel
+
+El panel de la derecha muestra sólo lo que sirve para lo que estás haciendo:
+
+| Situación | Se ve |
+|---|---|
+| Construir o Caja, o piezas seleccionadas | **Color**, **En esta figura** y **Forma de la pieza** |
+| Pintar, Rellenar o Calcomanía | **Color** y **En esta figura** (y las calcomanías), además de **Escena** |
+| Nada seleccionado (puntero), Borrar o Gotero | **Escena** |
+
+- **Color:** paleta, selector libre y HEX, opacidad y **Brilla**.
+- **En esta figura:** los colores que ya usa la figura, del más usado al menos usado.
+- Cada opción tiene su **?** con una explicación.
 
 ## Seleccionar y editar
 
@@ -71,16 +91,33 @@ npm run preview   # sirve dist/ en http://localhost:4173
 - **Imágenes guía (H):** frente, lado y atrás, al fondo (como los *image planes* de Maya) o en cruz.
   Altura, posición, volteo y opacidad ajustables. Se guardan por figura.
 
+## Luz
+
+Está en **Escena**: un selector de ambiente (como el de Fondo) y el botón **Ajustar**.
+
+- **Ambientes listos:** Día, Atardecer (sol bajo y cálido), Noche (azulada y tenue, con cielo de noche) y
+  Estudio (pareja, ideal para exportar).
+- **Ajustar luz:**
+  - **Sol:** color, intensidad, giro y altura (de dónde caen las sombras), sombras y su suavidad.
+  - **Ambiente:** color e intensidad.
+  - **Piezas que brillan:** fuerza de su luz.
+- Las piezas que brillan cercanas comparten luz: hay hasta 8 luces, repartidas por zonas.
+- La luz se **guarda con cada figura** y sale en las imágenes exportadas. El `.glb` lleva el sol, las luces
+  de las piezas que brillan y su material emisivo.
+
 ## Escena
 
+Sale cuando no estás creando ni editando piezas (es lo de toda la figura).
+
 - **Cuadrícula:** 8, 16, 24, 32, 48, 64 o 128.
-- **Fondo:** pradera, cielo, arena, nube o noche.
+- **Fondo:** pradera, cielo, arena, nube o noche. Se guarda con la figura.
+- **Luz:** ambiente y ajustes (ver arriba).
 - **Orillas:** rectas (pixel puro), suaves o redondas. Se guardan con la figura y viajan al exportar e importar.
 - **Líneas del piso:** mostrar u ocultar la cuadrícula del piso.
 
 ## Figuras, ejemplos y archivos
 
-- **Mis figuras (G):** varias figuras con miniatura, guardadas solas en el navegador; se pueden duplicar o eliminar.
+- **Mis figuras (G):** varias figuras con miniatura (con su luz y su fondo), guardadas solas en el navegador; se pueden duplicar o eliminar.
 - **Ejemplos:** pestaña dentro de Mis figuras; al abrir uno se crea una copia editable.
 - **Exportar (Ctrl+E):**
   - Imagen PNG tal como se ve en pantalla, o recortada a la figura (vista actual o isométrica).
@@ -105,6 +142,10 @@ La ayuda (**?**) tiene la lista completa de atajos.
   "version": 2,
   "size": 24,                 // cuadrícula
   "bevel": "soft",            // orillas: flat | soft | round (opcional)
+  "background": "pradera",    // fondo (opcional)
+  "light": { "preset": "noche", "sun": "#a9c1ff", "sunI": 0.5, "az": 140, "el": 50,
+             "amb": "#4d5f99", "ground": "#151a2b", "ambI": 0.45,
+             "shadows": true, "soft": 6, "glow": 1.6 },   // luz (opcional)
   "palette": ["#4fa3e0", "#ffe066/cube/2/0/3,1,1/0,0.5,0", "…"],
   "voxels": [x, y, z, índiceDePaleta, …],
   "stickers": [[px, py, pz, cara, diseño, color, tamaño, volteo], …],
@@ -115,10 +156,10 @@ La ayuda (**?**) tiene la lista completa de atajos.
 Cada entrada de la paleta describe una pieza:
 
 ```text
-#rrggbb[aa]/forma/cara/giro/ancho,alto,fondo/dx,dy,dz|gN
+#rrggbb[aa][*]/forma/cara/giro/ancho,alto,fondo/dx,dy,dz|gN
 ```
 
-- `aa`: opacidad.
+- `aa`: opacidad; `*`: la pieza brilla.
 - `forma`: `cube`, `sphere`, `cylinder`, `cone`, `pyramid`, `wedge` o `compound:x,y,z,w,h,d;…` (piezas fusionadas).
 - `ancho,alto,fondo` / `dx,dy,dz`: tamaño y desplazamiento dentro de la casilla (pasos de 0.1).
 - `|gN`: grupo.

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CuboStudio</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand"><svg class="brand-cube" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 28.5 9.5v13L16 29.5 3.5 22.5v-13Z" fill="#4fa3e0"/><path d="M16 2.5 28.5 9.5 16 16.5 3.5 9.5Z" fill="#a9d6f5"/><path d="M16 16.5v13l12.5-7v-13Z" fill="#2f7fbd"/></svg><span class="brand-name">CuboStudio</span></div>
+        <input id="model-name" class="name-input" maxlength="40" spellcheck="false" aria-label="Nombre de la figura" />
+        <span id="save-status" class="save-status"></span>
+        <div class="spacer"></div>
+        <button class="btn icon" id="btn-undo" data-icon="undo" data-tip="Deshacer" data-key="Ctrl+Z"></button>
+        <button class="btn icon" id="btn-redo" data-icon="redo" data-tip="Rehacer" data-key="Ctrl+Shift+Z"></button>
+        <button class="btn icon" id="btn-paste" data-icon="paste" data-tip="Pegar" data-key="Ctrl+V" data-desc="Pega lo que copiaste (también entre figuras distintas). Queda seleccionado para acomodarlo." disabled></button>
+        <span class="divider"></span>
+        <button class="btn" id="btn-gallery" data-icon="folder" data-tip="Mis figuras y ejemplos" data-key="G" data-desc="Abre tus figuras guardadas o crea una copia de un ejemplo."><span>Mis figuras</span></button>
+        <button class="btn" id="btn-import" data-icon="upload" data-tip="Importar" data-desc="Abre un archivo .json de CuboStudio. También puedes arrastrarlo a la ventana."><span>Importar</span></button>
+        <button class="btn primary" id="btn-export" data-icon="image" data-tip="Exportar" data-key="Ctrl+E" data-desc="Imagen PNG, modelo 3D (.glb) o proyecto (.json)."><span>Exportar</span></button>
+        <button class="btn icon" id="btn-help" data-icon="help" data-tip="Atajos de teclado" data-key="?"></button>
+      </header>
+
+      <nav class="toolbar" aria-label="Herramientas">
+        <div class="tool-group" id="tools"></div>
+        <span class="tool-sep"></span>
+        <button class="tool toggle" id="btn-mirror" data-icon="mirror" data-tip="Espejo X" data-key="M" data-desc="Lo que construyes, pintas o borras se repite del otro lado."><kbd>M</kbd></button>
+        <button class="tool toggle" id="btn-edges" data-icon="edges" data-tip="Marcar orillas" data-key="L" data-desc="Dibuja el contorno de cada pieza para distinguirlas mientras modelas. No sale en lo que exportas."><kbd>L</kbd></button>
+        <button class="tool toggle space" id="btn-space" data-icon="space" data-tip="Espacio 3D" data-key="V" data-desc="Muestra un plano para poner piezas flotantes. Q / W cambian de capa."><kbd>V</kbd></button>
+        <span class="tool-sep"></span>
+        <button class="tool toggle" id="btn-refs" data-icon="refs" data-tip="Imágenes guía" data-key="H" data-desc="Pon imágenes de frente, lado y atrás para calcar. H las muestra u oculta."></button>
+      </nav>
+
+      <main id="viewport">
+        <button class="edge-toggle left" id="toggle-tools" data-tip="Ocultar herramientas" data-tip-pos="right"></button>
+        <button class="edge-toggle right" id="toggle-panel" data-tip="Ocultar panel de colores" data-tip-pos="bottom"></button>
+        <div class="empty-hint" id="empty-hint" hidden>
+          <span><b>Figura vacía.</b> Haz clic en el piso para poner tu primer cubo, o</span>
+          <button class="btn primary small" id="empty-examples"><span>Ver ejemplos</span></button>
+        </div>
+        <div class="views" role="group" aria-label="Vistas">
+          <button data-view="iso" title="Isométrica (1)">Iso</button>
+          <button data-view="front" title="Frente (2)">Frente</button>
+          <button data-view="side" title="Lado (3)">Lado</button>
+          <button data-view="back" title="Atrás (4)">Atrás</button>
+          <button data-view="top" title="Arriba (5)">Arriba</button>
+          <button data-view="frame" data-icon="frame" title="Encuadrar figura (F)" aria-label="Encuadrar"></button>
+        </div>
+        <div class="ref-panel" id="ref-panel" hidden>
+          <header>
+            <b>Imágenes guía</b>
+            <div class="spacer"></div>
+            <button class="btn icon sm" id="ref-close" data-icon="x" aria-label="Cerrar"></button>
+          </header>
+          <div class="segmented" id="ref-mode">
+            <button class="seg" data-mode="wall">Al fondo</button>
+            <button class="seg" data-mode="cross">En cruz</button>
+          </div>
+          <label class="field"><span>Opacidad</span><input type="range" id="ref-opacity" min="0.1" max="1" step="0.05" /></label>
+          <label class="field check"><input type="checkbox" id="ref-visible" /><span>Mostrar <kbd>H</kbd></span></label>
+          <div id="ref-slots"></div>
+          <p class="muted small">Tip: usa la vista Frente (2) o Lado (3) para calcar. Las guías no salen al exportar.</p>
+        </div>
+        <div class="space-bar" id="space-bar" hidden>
+          <b>Espacio 3D</b>
+          <div class="segmented" id="space-axis"></div>
+          <button class="btn icon sm" id="space-down" data-icon="minus" title="Bajar capa (Q)"></button>
+          <span class="space-layer" id="space-layer"></span>
+          <button class="btn icon sm" id="space-up" data-icon="plus" title="Subir capa (W)"></button>
+          <span class="muted small">Q / W</span>
+        </div>
+        <div class="select-bar" id="select-bar" hidden>
+          <span class="sel-count" id="select-count"></span>
+          <span class="pill-group" id="gizmo-mode">
+            <button class="pill-btn" data-mode="none" data-icon="select" data-tip="Sólo seleccionar" data-desc="Sin flechas ni manijas: junta varias piezas con Shift+clic o con el rectángulo (R) y luego elige qué hacer."></button>
+            <button class="pill-btn" data-mode="translate" data-icon="move" data-tip="Mover" data-desc="Arrastra las flechas para mover en X, Y o Z (pasos de 0.1)."></button>
+            <button class="pill-btn" data-mode="rotate" data-icon="rotate" data-tip="Girar" data-desc="Arrastra un aro para girar 90° sobre ese eje."></button>
+            <button class="pill-btn" data-mode="scale" data-icon="scale" data-tip="Escalar" data-desc="Caras: crece hacia ese lado. Esquinas amarillas: crece parejo en diagonal. Pasos de 0.1."></button>
+          </span>
+          <span class="pill-sep"></span>
+          <button class="pill-btn" id="sel-group" data-icon="group" data-tip="Agrupar" data-key="Ctrl+G" data-desc="Une las piezas: un clic en cualquiera selecciona el grupo completo."></button>
+          <button class="pill-btn" id="sel-ungroup" data-icon="ungroup" data-tip="Desagrupar" data-key="Ctrl+Shift+G" data-desc="Vuelve a dejar las piezas sueltas."></button>
+          <button class="pill-btn" id="sel-merge" data-icon="merge" data-tip="Fusionar" data-key="Ctrl+J" data-desc="Une cubos del mismo color en una sola pieza (L, E, T…). Sólo con cubos de un solo color."></button>
+          <button class="pill-btn" id="sel-split" data-icon="split" data-tip="Separar" data-key="Ctrl+Shift+J" data-desc="Parte la pieza fusionada o estirada en cubos 1×1×1 sueltos."></button>
+          <button class="pill-btn" id="sel-duplicate" data-icon="duplicate" data-tip="Duplicar" data-key="Ctrl+D" data-desc="Crea una copia al lado, ya seleccionada."></button>
+          <button class="pill-btn" id="sel-copy" data-icon="copy" data-tip="Copiar" data-key="Ctrl+C" data-desc="Copia para pegar después, aquí o en otra figura."></button>
+          <button class="pill-btn danger" id="sel-delete" data-icon="trash" data-tip="Eliminar" data-key="Supr"></button>
+        </div>
+        <div class="hud">
+          <span id="stat-count"></span>
+          <span id="stat-hover"></span>
+        </div>
+        <div class="hint" id="hint">
+          <b>Clic</b> usar herramienta · <b>Arrastrar</b> girar · <b>Ctrl/⌘+arrastrar</b> trazo ·
+          <b>Clic der.</b> mover · <b>Shift</b> borrar · <b>Alt</b> gotero
+        </div>
+      </main>
+
+      <aside class="panel">
+        <section>
+          <h3>Color</h3>
+          <div class="current-color">
+            <span class="tip-wrap" data-tip-delay="300" data-tip="Elegir color" data-desc="Clic en el cuadro para elegir cualquier color.">
+              <label class="swatch big" id="current-swatch">
+                <input type="color" id="color-input" aria-label="Elegir cualquier color" />
+              </label>
+            </span>
+            <div>
+              <input id="hex-input" class="hex-input" maxlength="7" spellcheck="false" aria-label="Color hexadecimal" />
+            </div>
+          </div>
+          <div class="swatches" id="palette"></div>
+          <div class="field opacity-field">
+            <span>Opacidad <span class="help" tabindex="0" data-tip-delay="300" data-tip="Opacidad" data-desc="Baja la opacidad para hacer agua o vidrio: se puede construir dentro y se ve lo que hay adentro. Se aplica a lo que construyes, pintas o tienes seleccionado.">?</span></span>
+            <input type="range" id="opacity" min="10" max="100" step="5" value="100" aria-label="Opacidad" />
+            <span class="opacity-value" id="opacity-value">100%</span>
+          </div>
+        </section>
+        <section id="piece-section">
+          <h3>Forma de la pieza <span class="help" tabindex="0" data-tip-delay="300" data-tip="Forma de la pieza" data-desc="Apuntan hacia afuera de la cara donde haces clic. Para moverlas o girarlas, usa la herramienta Seleccionar (el puntero).">?</span></h3>
+          <div class="swatches" id="piece-grid"></div>
+        </section>
+        <section id="sticker-section">
+          <h3>Calcomanías <kbd>S</kbd></h3>
+          <div class="sticker-grid" id="sticker-grid"></div>
+          <p class="muted small">Clic en un cuadro para pegarla (1×1); clic sobre una ya pegada le cambia diseño y color. Para moverla, agrandarla o borrarla: <b>Seleccionar</b> (el puntero).</p>
+        </section>
+        <section id="recent-section">
+          <h3 class="with-action">Recientes <button class="link-btn" id="recent-clear" data-tip="Limpiar recientes" data-desc="Vacía esta lista. Tu figura no cambia." data-tip-delay="300">Limpiar</button></h3>
+          <div class="swatches" id="recent"></div>
+        </section>
+        <section>
+          <h3>En esta figura</h3>
+          <div class="swatches" id="model-colors"></div>
+          <p class="muted small" id="model-colors-empty">Aún no hay cubos.</p>
+        </section>
+        <section>
+          <h3>Escena</h3>
+          <div class="scene-block">
+            <span class="scene-label">Cuadrícula</span>
+            <div class="chips" id="grid-size" role="radiogroup" aria-label="Tamaño de la cuadrícula"></div>
+          </div>
+          <div class="scene-block">
+            <span class="scene-label">Fondo</span>
+            <div class="picker">
+              <button class="bg-current" id="bg-current" aria-haspopup="true" aria-label="Elegir fondo">
+                <span class="swatch" id="bg-dot"></span><span class="bg-name" id="bg-name"></span><span class="pick-chev" data-icon="chevronDown"></span>
+              </button>
+              <div class="pop bg-options" id="bg-options" hidden></div>
+            </div>
+          </div>
+          <div class="scene-block">
+            <span class="scene-label">Orillas <span class="help" tabindex="0" data-tip-delay="300" data-tip="Orillas de los cubos" data-desc="Rectas: cubos cuadrados, pixel puro. Suaves: bisel ligero. Redondas: tipo juguete. Aplica a todas las figuras y a lo que exportas.">?</span></span>
+            <div class="segmented icons" id="bevel-mode"></div>
+          </div>
+          <label class="field check">
+            <input type="checkbox" id="show-grid" />
+            <span>Líneas del piso</span>
+          </label>
+          <button class="btn danger block" id="btn-clear" data-icon="trash"><span>Vaciar figura</span></button>
+        </section>
+      </aside>
+    </div>
+
+    <!-- Galería -->
+    <dialog id="gallery-dialog" class="modal wide">
+      <header>
+        <div class="segmented tabs" id="gallery-tabs">
+          <button class="seg" data-tab="mine">Mis figuras</button>
+          <button class="seg" data-tab="examples">Ejemplos</button>
+        </div>
+        <span class="muted small" id="gallery-note"></span>
+        <div class="spacer"></div>
+        <button class="btn primary" id="btn-new" data-icon="plus"><span>Nueva vacía</span></button>
+        <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
+      </header>
+      <div class="gallery-scroll" tabindex="-1" autofocus>
+        <div class="gallery" id="gallery"></div>
+        <div class="gallery" id="examples" hidden></div>
+      </div>
+    </dialog>
+
+    <!-- Confirmación (mismo estilo que el resto de la app) -->
+    <dialog id="confirm-dialog" class="modal small">
+      <div class="confirm-body">
+        <div class="confirm-icon" data-icon="trash"></div>
+        <h2 id="confirm-title"></h2>
+        <p class="muted" id="confirm-message"></p>
+        <div class="row confirm-actions">
+          <button class="btn" id="confirm-cancel">Cancelar</button>
+          <button class="btn danger-solid" id="confirm-ok"></button>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Exportar -->
+    <dialog id="export-dialog" class="modal wide">
+      <header>
+        <h2>Exportar</h2>
+        <div class="spacer"></div>
+        <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
+      </header>
+      <div class="export-body">
+        <div class="export-preview checker" id="export-preview"><img id="export-img" alt="Vista previa" /></div>
+        <div class="export-options">
+          <h3>Imagen PNG</h3>
+          <label class="field">
+            <span>Tamaño</span>
+            <select id="export-size">
+              <option value="512">512 px</option>
+              <option value="1024" selected>1024 px</option>
+              <option value="2048">2048 px</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Encuadre</span>
+            <select id="export-angle">
+              <option value="screen">Tal como se ve en pantalla</option>
+              <option value="current">Vista actual, recortada a la figura</option>
+              <option value="iso">Isométrica, recortada a la figura</option>
+            </select>
+          </label>
+          <label class="field check"><input type="checkbox" id="export-transparent" checked /><span>Fondo transparente</span></label>
+          <label class="field check"><input type="checkbox" id="export-shadow" checked /><span>Sombra</span></label>
+          <p class="muted small" id="export-dims"></p>
+          <div class="row">
+            <button class="btn primary" id="btn-download-png" data-icon="download"><span>Descargar PNG</span></button>
+            <button class="btn" id="btn-copy-png" data-icon="copy"><span>Copiar</span></button>
+          </div>
+          <h3>Otros formatos</h3>
+          <div class="row">
+            <button class="btn" id="btn-download-glb" data-icon="build"><span>Modelo 3D (.glb)</span></button>
+            <button class="btn" id="btn-download-json" data-icon="download"><span>Proyecto (.json)</span></button>
+          </div>
+          <p class="muted small">El .glb abre en Blender, visores 3D o tu sitio web (sin calcomanías por ahora). El .json se puede volver a importar.</p>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Ayuda -->
+    <dialog id="help-dialog" class="modal">
+      <header>
+        <h2>Atajos</h2>
+        <div class="spacer"></div>
+        <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
+      </header>
+      <div class="shortcuts">
+        <div><kbd>A</kbd> Seleccionar (puntero)</div><div></div>
+        <div><kbd>B</kbd> Construir</div><div><kbd>O</kbd> Caja: arrastra, <b>rueda</b> = altura</div>
+        <div><kbd>E</kbd> Borrar</div><div><kbd>P</kbd> Pintar</div>
+        <div><kbd>K</kbd> Rellenar (cubeta)</div><div><kbd>I</kbd> Gotero</div>
+        <div><kbd>S</kbd> Calcomanía</div><div><kbd>M</kbd> Espejo X</div>
+        <div><kbd>L</kbd> Marcar orillas (sólo al modelar)</div><div><kbd>R</kbd> Selección rectangular</div>
+        <div><kbd>Ctrl/⌘</kbd>+arrastrar Trazo continuo</div><div><kbd>Shift</kbd>+caja Borrar en caja</div>
+        <div><kbd>Shift</kbd>+clic Borrar</div><div><kbd>Alt</kbd>+clic Gotero</div>
+        <div><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> Copiar / pegar</div><div><kbd>Ctrl</kbd>+<kbd>D</kbd> Duplicar selección</div>
+        <div><kbd>Ctrl</kbd>+<kbd>J</kbd> Fusionar en una pieza</div><div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd> Separar</div>
+        <div><kbd>Ctrl</kbd>+<kbd>G</kbd> Agrupar · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> Desagrupar</div><div><kbd>Ctrl</kbd>+clic Una pieza dentro de un grupo</div>
+        <div><kbd>Ctrl</kbd>+<kbd>Z</kbd> Deshacer</div><div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> Rehacer</div>
+        <div><kbd>←↑→↓</kbd> Mover figura</div><div><kbd>PgUp</kbd>/<kbd>PgDn</kbd> Subir/bajar</div>
+        <div><kbd>F</kbd> Encuadrar cámara</div><div></div>
+        <div><kbd>1</kbd>–<kbd>5</kbd> Vistas</div><div><kbd>G</kbd> Mis figuras</div>
+        <div><kbd>V</kbd> Espacio 3D (cubos flotantes)</div><div><kbd>Q</kbd>/<kbd>W</kbd> Bajar/subir capa</div>
+        <div><kbd>H</kbd> Mostrar/ocultar guías</div><div><kbd>Supr</kbd> Borrar calcomanía seleccionada</div>
+        <div><kbd>Ctrl</kbd>+<kbd>S</kbd> Guardar ahora</div><div><kbd>Ctrl</kbd>+<kbd>E</kbd> Exportar</div>
+      </div>
+      <p class="muted small">Tip: arrastra un archivo .json sobre la ventana para importarlo. Todo se guarda solo en este navegador.</p>
+    </dialog>
+
+    <input type="file" id="file-input" accept=".json,application/json" hidden />
+    <input type="file" id="ref-file" accept="image/*" hidden />
+    <div class="toasts" id="toasts"></div>
+    <div class="drop-overlay" id="drop-overlay">Suelta un .json o una imagen guía</div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

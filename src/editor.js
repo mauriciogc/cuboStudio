@@ -53,6 +53,8 @@ export class Editor extends EventTarget {
     this.color = '#4fa3e0';
     /** Opacidad de lo que se construye o pinta (1 = sólido). */
     this.opacity = 1;
+    /** Las piezas nuevas brillan (dan luz de su color) */
+    this.glow = false;
     this.mirror = false;
     this.stickerId = 'eye-tall';
     /** Las calcomanías se pegan en 1×1; se agrandan después con Seleccionar → Escalar. */
@@ -97,7 +99,7 @@ export class Editor extends EventTarget {
   setColor(color) {
     this.color = color.toLowerCase();
     if (this.selected) this.updateSelected({ c: this.color });
-    if (this.selection.size) this.#mapSelection((p) => ({ ...p, fill: withAlpha(this.color, p.opacity) }));
+    if (this.selection.size) this.#mapSelection((p) => ({ ...p, fill: withAlpha(this.color, p.opacity, p.glow) }));
     this.#emit('color');
     this.#refreshGhost();
   }
@@ -130,8 +132,26 @@ export class Editor extends EventTarget {
     return this.opacity;
   }
 
-  /** Color + opacidad actuales, tal como se guardan. */
-  get fill() { return withAlpha(this.color, this.opacity); }
+  /** ¿Brilla lo seleccionado? (o lo que se va a construir) */
+  get shownGlow() {
+    if (this.selection.size) {
+      const [k] = this.selection;
+      const v = this.model.voxels.get(k);
+      if (v) return parseVoxel(v).glow;
+    }
+    return this.glow;
+  }
+
+  /** Color + opacidad + brillo actuales, tal como se guardan. */
+  get fill() { return withAlpha(this.color, this.opacity, this.glow); }
+
+  /** Brillo: a lo seleccionado o, sin selección, a lo que se construya o pinte. */
+  setGlow(on) {
+    if (this.selection.size) this.#mapSelection((p) => ({ ...p, fill: withAlpha(p.color, p.opacity, on) }));
+    else this.glow = !!on;
+    this.#emit('color');
+    this.#refreshGhost();
+  }
 
   /**
    * Con piezas seleccionadas cambia sólo su opacidad; sin selección, la de lo que se construye.
@@ -141,7 +161,7 @@ export class Editor extends EventTarget {
     if (!this.selection.size) this.opacity = opacity;
     if (this.selection.size) {
       if (live && !this.stroke) this.stroke = [];
-      this.#mapSelection((p) => ({ ...p, fill: withAlpha(p.color, opacity) }));
+      this.#mapSelection((p) => ({ ...p, fill: withAlpha(p.color, opacity, p.glow) }));
     }
     if (!live && this.stroke) {
       const diff = this.stroke;

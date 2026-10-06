@@ -31,7 +31,8 @@ const HEX = /^#[0-9a-f]{6}$/;
 
 // Piezas: cada celda puede ser un cubo u otra forma. El valor de un vóxel es
 // "#rrggbb" (cubo 1×1×1) o "#rrggbb/forma/cara[/giro[/ancho,alto,fondo[/dx,dy,dz]]]".
-// El color puede llevar transparencia: "#rrggbbaa" (aa = opacidad).
+// El color puede llevar transparencia: "#rrggbbaa" (aa = opacidad), y un "*" al final si la
+// pieza brilla (da luz de su color): "#rrggbb*" o "#rrggbbaa*".
 // cara = hacia dónde apunta (0..5), giro = cuartos de vuelta (0..3),
 // tamaño = medidas en cubos (pasos de 0.1), creciendo desde la esquina de su celda,
 // desplazamiento = corrimiento fino dentro de la celda (pasos de 0.1).
@@ -44,7 +45,7 @@ export const PIECES = {
   wedge: 'Triángulo',
 };
 const NUM = '\\d+(\\.\\d+)?';
-const VOXEL = new RegExp(`^#[0-9a-f]{6}([0-9a-f]{2})?(\\/(cube|sphere|cylinder|cone|pyramid|wedge|compound:[-0-9.,;]+)\\/[0-5](\\/[0-3](\\/${NUM},${NUM},${NUM}(\\/${NUM},${NUM},${NUM})?)?)?)?(\\|g\\d+)?$`);
+const VOXEL = new RegExp(`^#[0-9a-f]{6}([0-9a-f]{2})?\\*?(\\/(cube|sphere|cylinder|cone|pyramid|wedge|compound:[-0-9.,;]+)\\/[0-5](\\/[0-3](\\/${NUM},${NUM},${NUM}(\\/${NUM},${NUM},${NUM})?)?)?)?(\\|g\\d+)?$`);
 const UP_FACE = 2;
 const UNIT = [1, 1, 1];
 const ZERO = [0, 0, 0];
@@ -56,20 +57,24 @@ export const snapStep = (v) => Math.round(v * 10) / 10;
 export const OPACITIES = [1, 0.75, 0.5, 0.25];
 
 /** Color con opacidad: '#rrggbb' si es sólido, '#rrggbbaa' si es transparente. */
-export function withAlpha(color, opacity = 1) {
+/** Color tal como se guarda: con su opacidad ("aa") y "*" si brilla. */
+export function withAlpha(color, opacity = 1, glow = false) {
   const c = color.slice(0, 7);
-  if (opacity >= 1) return c;
-  return c + Math.round(opacity * 255).toString(16).padStart(2, '0');
+  const a = opacity >= 1 ? '' : Math.round(opacity * 255).toString(16).padStart(2, '0');
+  return c + a + (glow ? '*' : '');
 }
 
 export function parseVoxel(v) {
   const [body, group = null] = v.split('|');
   const [fill, shape = 'cube', f = UP_FACE, t = 0, size, offset] = body.split('/');
-  const opacity = fill.length === 9 ? Math.round((parseInt(fill.slice(7), 16) / 255) * 20) / 20 : 1;
+  const glow = fill.endsWith('*');
+  const raw = glow ? fill.slice(0, -1) : fill;
+  const opacity = raw.length === 9 ? Math.round((parseInt(raw.slice(7), 16) / 255) * 20) / 20 : 1;
   return {
-    fill, // color con su opacidad, tal como se guarda
+    fill, // color con su opacidad (y brillo), tal como se guarda
     color: fill.slice(0, 7),
     opacity,
+    glow, // la pieza da luz de su color
     shape,
     f: Number(f),
     t: Number(t),
@@ -385,6 +390,8 @@ export class VoxelModel {
     }
     const out = { format: 'cubostudio', version: 2, size: this.size, palette, voxels, stickers };
     if (this.bevel) out.bevel = this.bevel; // orillas con las que se hizo ('flat' | 'soft' | 'round')
+    if (this.light) out.light = this.light; // luz de la escena (sol, ambiente y brillo)
+    if (this.background) out.background = this.background; // fondo ('pradera', 'noche'…)
     return out;
   }
 
@@ -395,6 +402,8 @@ export class VoxelModel {
     const size = GRID_SIZES.includes(data.size) ? data.size : 24;
     const m = new VoxelModel(size);
     if (['flat', 'soft', 'round'].includes(data.bevel)) m.bevel = data.bevel;
+    if (data.light && typeof data.light === 'object') m.light = data.light; // se valida al aplicarla
+    if (typeof data.background === 'string' && /^[a-z]+$/.test(data.background)) m.background = data.background;
     const v = data.voxels;
     for (let i = 0; i + 3 < v.length; i += 4) {
       const color = String(data.palette[v[i + 3]] ?? '').toLowerCase();

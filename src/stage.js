@@ -9,6 +9,58 @@ export const BACKGROUNDS = {
   noche: { label: 'Noche', color: '#2b3040' },
 };
 
+// Luz de la escena. sun/sunI: color e intensidad del sol; az/el: giro y altura del sol (grados);
+// amb/ground/ambI: luz ambiente (cielo y rebote del suelo); shadows/soft: sombras y su suavidad;
+// glow: fuerza de la luz de las piezas que brillan.
+export const LIGHT_PRESETS = {
+  dia: {
+    label: 'Día', sun: '#fff4e3', sunI: 2.1, az: 27, el: 58,
+    amb: '#ffffff', ground: '#c7b99c', ambI: 1.9, shadows: true, soft: 5, glow: 1,
+  },
+  atardecer: {
+    label: 'Atardecer', sun: '#ffa45c', sunI: 2.6, az: 300, el: 14,
+    amb: '#ffd2b8', ground: '#6b4a5c', ambI: 1.1, shadows: true, soft: 4, glow: 1.2,
+  },
+  noche: {
+    label: 'Noche', sun: '#a9c1ff', sunI: 0.5, az: 140, el: 50,
+    amb: '#4d5f99', ground: '#151a2b', ambI: 0.45, shadows: true, soft: 6, glow: 1.6,
+  },
+  estudio: {
+    label: 'Estudio', sun: '#ffffff', sunI: 1.4, az: 35, el: 65,
+    amb: '#ffffff', ground: '#dedede', ambI: 2.5, shadows: true, soft: 9, glow: 1,
+  },
+};
+export const DEFAULT_LIGHT = 'dia';
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const clampNum = (v, lo, hi, def) => (Number.isFinite(+v) ? Math.min(hi, Math.max(lo, +v)) : def);
+
+/** Posición del sol para una luz y una cuadrícula de n cubos (gira alrededor del centro). */
+export function sunPosition(light, n) {
+  const a = THREE.MathUtils.degToRad(light.az);
+  const e = THREE.MathUtils.degToRad(light.el);
+  const r = n * 1.9;
+  return [r * Math.cos(e) * Math.sin(a), r * Math.sin(e), r * Math.cos(e) * Math.cos(a)];
+}
+
+/** Luz completa y válida a partir de lo guardado (o de un ambiente listo). */
+export function normalizeLight(light) {
+  const base = LIGHT_PRESETS[light?.preset] ?? LIGHT_PRESETS[DEFAULT_LIGHT];
+  const l = { ...base, ...(light && typeof light === 'object' ? light : {}) };
+  return {
+    preset: light?.preset in LIGHT_PRESETS ? light.preset : (light ? null : DEFAULT_LIGHT),
+    sun: HEX_COLOR.test(l.sun) ? l.sun.toLowerCase() : base.sun,
+    sunI: clampNum(l.sunI, 0, 5, base.sunI),
+    az: ((clampNum(l.az, -720, 720, base.az) % 360) + 360) % 360,
+    el: clampNum(l.el, 2, 90, base.el),
+    amb: HEX_COLOR.test(l.amb) ? l.amb.toLowerCase() : base.amb,
+    ground: HEX_COLOR.test(l.ground) ? l.ground.toLowerCase() : base.ground,
+    ambI: clampNum(l.ambI, 0, 5, base.ambI),
+    shadows: l.shadows !== false,
+    soft: clampNum(l.soft, 1, 12, base.soft),
+    glow: clampNum(l.glow, 0, 3, base.glow),
+  };
+}
+
 const VIEWS = {
   iso: new THREE.Vector3(1, 0.9, 1.25),
   front: new THREE.Vector3(0, 0.22, 1),
@@ -48,6 +100,7 @@ export class Stage {
     this.anim = null;
 
     this.#buildLights();
+    this.lighting = normalizeLight(null);
     this.#buildFloor();
     this.setBackground('pradera');
     this.setGridSize(24);
@@ -128,10 +181,32 @@ export class Stage {
     s.near = 0.5;
     s.far = n * 5;
     s.updateProjectionMatrix();
-    this.sun.position.set(n * 0.45, n * 1.6, n * 0.9);
+    this.#placeSun();
     this.controls.maxDistance = Math.max(400, n * 8);
     this.camera.far = Math.max(2000, n * 20);
     this.camera.updateProjectionMatrix();
+  }
+
+  /** Aplica la luz de la escena (ver LIGHT_PRESETS). Devuelve la luz ya validada. */
+  setLighting(light) {
+    const l = normalizeLight(light);
+    this.lighting = l;
+    this.hemi.color.set(l.amb);
+    this.hemi.groundColor.set(l.ground);
+    this.hemi.intensity = l.ambI;
+    this.sun.color.set(l.sun);
+    this.sun.intensity = l.sunI;
+    this.sun.castShadow = l.shadows;
+    this.sun.shadow.radius = l.soft;
+    this.#placeSun();
+    return l;
+  }
+
+  /** El sol gira alrededor del centro de la cuadrícula según su giro y altura. */
+  #placeSun() {
+    this.sun.position.set(...sunPosition(this.lighting ?? normalizeLight(null), this.gridSize ?? 24));
+    this.sun.target.position.set(0, 0, 0);
+    this.sun.target.updateMatrixWorld();
   }
 
   setGridVisible(v) {

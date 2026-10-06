@@ -509,26 +509,43 @@ kbd {
 
 /* ---------- opacidad ---------- */
 .panel h3, .opacity-field { position: relative; }
-.panel h3.with-action { display: flex; align-items: center; justify-content: space-between; }
 .link-btn {
   border: 0; background: none; padding: 2px 4px; margin-right: -4px; border-radius: 4px; cursor: pointer;
   font: inherit; font-size: 12px; font-weight: 800; text-transform: none; letter-spacing: 0; color: var(--muted);
 }
 .link-btn:hover { color: var(--danger); background: var(--surface-2); }
-/* Recientes: × para quitar uno (aparece al pasar el mouse) */
-.recent-item { position: relative; display: grid; }
-.recent-x {
-  position: absolute; top: -6px; right: -6px; z-index: 2;
-  width: 18px; height: 18px; display: grid; place-items: center; padding: 0;
-  border: 0; border-radius: 50%; background: var(--text); color: #fff; cursor: pointer;
-  opacity: 0; transform: scale(0.7); transition: opacity 0.12s, transform 0.12s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-}
-.recent-x svg { width: 11px; height: 11px; stroke-width: 3; }
-.recent-item:hover .recent-x, .recent-x:focus-visible { opacity: 1; transform: scale(1); }
-.recent-x:hover { background: var(--danger); }
-@media (hover: none) { .recent-x { opacity: 1; transform: scale(1); } }
 .opacity-field { margin-top: 12px; gap: 8px; }
+.glow-field { margin: 6px 0 0; font-size: 14px; }
+
+/* ---------- luz ---------- */
+.light-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.light-options { display: flex; flex-direction: column; gap: 2px; min-width: 180px; padding: 6px; }
+.light-preset {
+  display: flex; align-items: center; gap: 10px; padding: 6px 8px;
+  border: 0; border-radius: 6px; background: transparent;
+  font: inherit; font-size: 14px; font-weight: 800; color: var(--text); cursor: pointer; text-align: left;
+}
+.light-preset:hover { background: var(--surface-2); }
+.light-preset.active { background: var(--accent-soft); color: var(--accent-strong); }
+.light-preset i { width: 24px; height: 24px; flex: none; border-radius: 5px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.light-adjust { flex: none; }
+.light-adjust.active { background: var(--accent-soft); color: var(--accent-strong); box-shadow: inset 0 0 0 2px var(--accent); }
+/* Recuadro de ajustes: parte de la Luz, con su fondo y borde */
+.light-panel {
+  margin-top: 10px; padding: 10px 12px 8px;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px;
+}
+.light-group + .light-group { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); }
+.light-label { display: block; margin-bottom: 6px; font-size: 12px; font-weight: 900; color: var(--text); text-transform: uppercase; letter-spacing: 0.04em; }
+.light-panel .link-btn { margin-top: 8px; }
+.light-row { display: flex; align-items: center; gap: 10px; }
+.light-row input[type='range'], .light-slider input[type='range'] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.light-color { width: 30px; height: 30px; flex: none; overflow: hidden; display: block; }
+.light-color input { opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.light-slider { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; }
+.light-slider > span, .light-slider > .check-inline { width: 78px; flex: none; color: var(--muted); }
+.check-inline { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.check-inline input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
 .opacity-field input[type='range'] { flex: 1; min-width: 0; accent-color: var(--accent); }
 .opacity-value { width: 38px; text-align: right; font-size: 13px; }
 .opacity-field > span { white-space: nowrap; }

@@ -102,7 +102,7 @@
       </main>
 
       <aside class="panel">
-        <section>
+        <section id="color-section">
           <h3>Color</h3>
           <div class="current-color">
             <span class="tip-wrap" data-tip-delay="300" data-tip="Elegir color" data-desc="Clic en el cuadro para elegir cualquier color.">
@@ -120,6 +120,15 @@
             <input type="range" id="opacity" min="10" max="100" step="5" value="100" aria-label="Opacidad" />
             <span class="opacity-value" id="opacity-value">100%</span>
           </div>
+          <label class="field check glow-field">
+            <input type="checkbox" id="glow" />
+            <span>Brilla <span class="help" tabindex="0" data-tip-delay="300" data-tip="Piezas que brillan" data-desc="La pieza da luz de su color e ilumina lo que tiene cerca (lámparas, fuego, lava, ojos…). Luce más con la luz de Noche. Se aplica a lo que construyes, pintas o tienes seleccionado.">?</span></span>
+          </label>
+        </section>
+        <section id="figure-colors-section">
+          <h3>En esta figura</h3>
+          <div class="swatches" id="model-colors"></div>
+          <p class="muted small" id="model-colors-empty">Aún no hay cubos.</p>
         </section>
         <section id="piece-section">
           <h3>Forma de la pieza <span class="help" tabindex="0" data-tip-delay="300" data-tip="Forma de la pieza" data-desc="Apuntan hacia afuera de la cara donde haces clic. Para moverlas o girarlas, usa la herramienta Seleccionar (el puntero).">?</span></h3>
@@ -130,28 +139,58 @@
           <div class="sticker-grid" id="sticker-grid"></div>
           <p class="muted small">Clic en un cuadro para pegarla (1×1); clic sobre una ya pegada le cambia diseño y color. Para moverla, agrandarla o borrarla: <b>Seleccionar</b> (el puntero).</p>
         </section>
-        <section id="recent-section">
-          <h3 class="with-action">Recientes <button class="link-btn" id="recent-clear" data-tip="Limpiar recientes" data-desc="Vacía esta lista. Tu figura no cambia." data-tip-delay="300">Limpiar</button></h3>
-          <div class="swatches" id="recent"></div>
-        </section>
-        <section>
-          <h3>En esta figura</h3>
-          <div class="swatches" id="model-colors"></div>
-          <p class="muted small" id="model-colors-empty">Aún no hay cubos.</p>
-        </section>
-        <section>
+        <section id="scene-section">
           <h3>Escena</h3>
           <div class="scene-block">
-            <span class="scene-label">Cuadrícula</span>
+            <span class="scene-label">Cuadrícula <span class="help" tabindex="0" data-tip-delay="300" data-tip="Cuadrícula" data-desc="Tamaño del espacio de trabajo, en cubos por lado (ancho, fondo y alto). Para achicarla, la figura tiene que caber en el nuevo tamaño.">?</span></span>
             <div class="chips" id="grid-size" role="radiogroup" aria-label="Tamaño de la cuadrícula"></div>
           </div>
-          <div class="scene-block">
-            <span class="scene-label">Fondo</span>
+          <div class="scene-block" id="bg-block">
+            <span class="scene-label">Fondo <span class="help" tabindex="0" data-tip-delay="300" data-tip="Fondo" data-desc="Color del cielo detrás de la figura. Sólo cambia cómo se ve mientras trabajas y en las imágenes con fondo de color; no cambia tus piezas. La luz de Noche pone el fondo de noche.">?</span></span>
             <div class="picker">
               <button class="bg-current" id="bg-current" aria-haspopup="true" aria-label="Elegir fondo">
                 <span class="swatch" id="bg-dot"></span><span class="bg-name" id="bg-name"></span><span class="pick-chev" data-icon="chevronDown"></span>
               </button>
               <div class="pop bg-options" id="bg-options" hidden></div>
+            </div>
+          </div>
+          <div class="scene-block" id="light-block">
+            <span class="scene-label">Luz <span class="help" tabindex="0" data-tip-delay="300" data-tip="Luz" data-desc="Ambientes listos (Día, Atardecer, Noche, Estudio). En Ajustar puedes cambiar el sol, el ambiente y la fuerza de las piezas que brillan. Se guarda con la figura.">?</span></span>
+            <div class="light-line">
+              <div class="picker">
+                <button class="bg-current" id="light-current" aria-haspopup="true" aria-label="Ambiente de luz">
+                  <span class="swatch" id="light-dot"></span><span class="bg-name" id="light-name"></span><span class="pick-chev" data-icon="chevronDown"></span>
+                </button>
+                <div class="pop light-options" id="light-presets" role="radiogroup" aria-label="Ambiente de luz" hidden></div>
+              </div>
+              <button class="btn small light-adjust" id="light-adjust" data-icon="sliders" aria-expanded="false"><span>Ajustar</span></button>
+            </div>
+            <div class="light-panel" id="light-panel" hidden>
+              <div class="light-group">
+                <span class="light-label">Sol</span>
+                <div class="light-row">
+                  <label class="swatch light-color" data-tip="Color del sol" data-tip-delay="300"><input type="color" id="sun-color" aria-label="Color del sol" /></label>
+                  <input type="range" id="sun-intensity" min="0" max="5" step="0.05" aria-label="Intensidad del sol" />
+                </div>
+                <label class="light-slider"><span>Giro</span><input type="range" id="sun-az" min="0" max="355" step="5" /></label>
+                <label class="light-slider"><span>Altura</span><input type="range" id="sun-el" min="2" max="90" step="1" /></label>
+                <div class="light-slider">
+                  <label class="check-inline"><input type="checkbox" id="sun-shadows" /> Sombras</label>
+                  <input type="range" id="sun-soft" min="1" max="12" step="1" aria-label="Suavidad de las sombras" data-tip="Suavidad" data-tip-delay="300" />
+                </div>
+              </div>
+              <div class="light-group">
+                <span class="light-label">Ambiente</span>
+                <div class="light-row">
+                  <label class="swatch light-color" data-tip="Color del ambiente" data-tip-delay="300"><input type="color" id="amb-color" aria-label="Color del ambiente" /></label>
+                  <input type="range" id="amb-intensity" min="0" max="5" step="0.05" aria-label="Intensidad del ambiente" />
+                </div>
+              </div>
+              <div class="light-group">
+                <span class="light-label">Piezas que brillan</span>
+                <label class="light-slider"><span>Fuerza</span><input type="range" id="glow-strength" min="0" max="3" step="0.1" /></label>
+              </div>
+              <button class="link-btn" id="light-reset">Volver a la luz de día</button>
             </div>
           </div>
           <div class="scene-block">

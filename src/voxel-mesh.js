@@ -152,6 +152,50 @@ function compoundEdgesFor(p) {
   return pos;
 }
 
+// ---------- piezas que brillan ----------
+
+/** Máximo de luces que dan las piezas que brillan (se reparten por zonas). */
+export const MAX_GLOW_LIGHTS = 8;
+const GLOW_ZONE = 3; // tamaño de zona: piezas brillantes cercanas comparten una luz
+const _glowColor = new THREE.Color();
+
+/**
+ * Agrupa las piezas que brillan por zonas y devuelve hasta MAX_GLOW_LIGHTS luces
+ * { pos: [x,y,z], color: THREE.Color, count } (las zonas con más piezas primero).
+ * pieces: [[centro, color], …]
+ */
+export function glowClusters(pieces) {
+  const zones = new Map();
+  for (const [center, color] of pieces) {
+    const k = center.map((v) => Math.floor(v / GLOW_ZONE)).join(',');
+    let z = zones.get(k);
+    if (!z) zones.set(k, (z = { sum: [0, 0, 0], color: new THREE.Color(0, 0, 0), count: 0 }));
+    center.forEach((v, i) => { z.sum[i] += v; });
+    z.color.add(_glowColor.set(color));
+    z.count++;
+  }
+  return [...zones.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, MAX_GLOW_LIGHTS)
+    .map((z) => ({ pos: z.sum.map((v) => v / z.count), color: z.color.multiplyScalar(1 / z.count), count: z.count }));
+}
+
+/** Piezas que brillan de un modelo: [[centro, color], …] */
+export function glowPieces(model, hidden = null) {
+  const out = [];
+  for (const [k, v] of model.voxels) {
+    if (!v.includes('*') || hidden?.has(k)) continue;
+    const p = parseVoxel(v);
+    if (p.glow) out.push([parseKey(k).map((c, i) => c + p.offset[i] + p.size[i] / 2), p.color]);
+  }
+  return out;
+}
+
+/** Intensidad y alcance de la luz de una zona con `count` piezas brillantes. */
+export function glowLightParams(count, strength = 1) {
+  return { intensity: 4 * strength * (1 + 0.5 * Math.sqrt(count - 1)), distance: 7 + 2 * Math.sqrt(count) };
+}
+
 const isSizedCube = (p) => p.shape === 'cube' && (!isUnit(p.size) || !isZero(p.offset));
 /** Piezas que se dibujan una por una con geometría propia (no instanciadas). */
 const ownMesh = (p) => isSizedCube(p) || isCompound(p);
@@ -184,6 +228,13 @@ export function pieceMatrix([x, y, z], p, out = new THREE.Matrix4()) {
   return out;
 }
 
+/** Material de pieza que brilla: su color pleno, sin sombra (no lo oscurece la luz). */
+function glowMaterial(color, opacity) {
+  return new THREE.MeshBasicMaterial({
+    color, transparent: opacity < 1, opacity, depthWrite: opacity >= 1, toneMapped: false,
+  });
+}
+
 /**
  * Dibuja las piezas con un InstancedMesh por forma (pocas draw calls).
  * La capacidad de cada uno crece al doble cuando hace falta.
@@ -206,6 +257,43 @@ export class VoxelMesh {
     );
     this.edges.visible = false;
     this.edges.renderOrder = 2;
+    // Luces de las piezas que brillan: un grupo fijo (se crea al primer brillo). Siempre son
+    // las mismas MAX_GLOW_LIGHTS luces: las que sobran quedan en 0 (así no se recompilan materiales)
+    this.glowStrength = 1;
+    this.glowLights = null;
+    this.glowZones = [];
+  }
+
+  /** Fuerza de la luz de las piezas que brillan (0 = sólo se ven, no iluminan). */
+  setGlowStrength(s) {
+    this.glowStrength = s;
+    this.#applyGlowLights();
+  }
+
+  #updateGlowLights(pieces) {
+    this.glowZones = glowClusters(pieces);
+    if (!this.glowLights && this.glowZones.length) {
+      this.glowLights = Array.from({ length: MAX_GLOW_LIGHTS }, () => {
+        const l = new THREE.PointLight('#ffffff', 0, 8, 2);
+        l.castShadow = false;
+        this.group.add(l);
+        return l;
+      });
+    }
+    this.#applyGlowLights();
+  }
+
+  #applyGlowLights() {
+    if (!this.glowLights) return;
+    this.glowLights.forEach((l, i) => {
+      const z = this.glowZones[i];
+      if (!z) { l.intensity = 0; return; }
+      const { intensity, distance } = glowLightParams(z.count, this.glowStrength);
+      l.position.set(...z.pos);
+      l.color.copy(z.color);
+      l.intensity = intensity;
+      l.distance = distance;
+    });
   }
 
   /** Arma el contorno de las piezas dibujadas ([celda, pieza] de cada una). */
@@ -252,23 +340,25 @@ export class VoxelMesh {
   }
 
   /** Material compartido por opacidad (los transparentes no escriben profundidad). */
-  #material(opacity) {
-    let m = this.materials.get(opacity);
+  /** Material compartido por opacidad; las piezas que brillan no se oscurecen con la luz. */
+  #material(opacity, glow = false) {
+    const key = `${opacity}|${glow}`;
+    let m = this.materials.get(key);
     if (!m) {
-      m = new THREE.MeshStandardMaterial({
+      m = glow ? glowMaterial('#ffffff', opacity) : new THREE.MeshStandardMaterial({
         roughness: opacity < 1 ? 0.2 : 0.78, metalness: 0,
         transparent: opacity < 1, opacity, depthWrite: opacity >= 1,
       });
-      this.materials.set(opacity, m);
+      this.materials.set(key, m);
     }
     return m;
   }
 
-  #sizedMaterial(color, opacity) {
-    const key = `${color}|${opacity}`;
+  #sizedMaterial(color, opacity, glow = false) {
+    const key = `${color}|${opacity}|${glow}`;
     let m = this.sizedMaterials.get(key);
     if (!m) {
-      m = new THREE.MeshStandardMaterial({
+      m = glow ? glowMaterial(color, opacity) : new THREE.MeshStandardMaterial({
         color, roughness: opacity < 1 ? 0.2 : 0.78, metalness: 0,
         transparent: opacity < 1, opacity, depthWrite: opacity >= 1,
       });
@@ -278,8 +368,9 @@ export class VoxelMesh {
   }
 
   #ensure(key, n) {
-    const [shape, op] = key.split('|');
+    const [shape, op, g] = key.split('|');
     const opacity = Number(op);
+    const glow = g === '1';
     this.layers[key] ??= { mesh: null, capacity: 0 };
     const layer = this.layers[key];
     if (n <= layer.capacity) return layer.mesh;
@@ -289,11 +380,11 @@ export class VoxelMesh {
       this.group.remove(layer.mesh);
       layer.mesh.dispose();
     }
-    const mesh = new THREE.InstancedMesh(PIECE_GEOMETRIES[shape], this.#material(opacity), cap);
+    const mesh = new THREE.InstancedMesh(PIECE_GEOMETRIES[shape], this.#material(opacity, glow), cap);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.setColorAt(0, _color.set('#ffffff')); // crea instanceColor
-    mesh.castShadow = opacity >= 0.75;
-    mesh.receiveShadow = true;
+    mesh.castShadow = opacity >= 0.75 && !glow;
+    mesh.receiveShadow = !glow;
     mesh.count = 0;
     mesh.userData.coords = [];
     mesh.userData.keys = [];
@@ -315,16 +406,19 @@ export class VoxelMesh {
     };
     this.sized.clear();
     const drawn = this.showEdges ? [] : null;
+    const glowing = [];
     for (const [k, v] of model.voxels) {
       if (hidden?.has(k)) continue;
       const p = parseVoxel(v);
       const c = parseKey(k);
+      // Aunque quede tapada, una pieza que brilla sigue dando luz
+      if (p.glow) glowing.push([c.map((x, i) => x + p.offset[i] + p.size[i] / 2), p.color]);
       if (ownMesh(p)) {
         drawn?.push([c, p]);
-        const mesh = new THREE.Mesh(pieceGeometry(p), this.#sizedMaterial(p.color, p.opacity));
+        const mesh = new THREE.Mesh(pieceGeometry(p), this.#sizedMaterial(p.color, p.opacity, p.glow));
         mesh.position.set(...c.map((v, i) => v + p.offset[i] + p.size[i] / 2));
-        mesh.castShadow = p.opacity >= 0.75;
-        mesh.receiveShadow = true;
+        mesh.castShadow = p.opacity >= 0.75 && !p.glow;
+        mesh.receiveShadow = !p.glow;
         mesh.renderOrder = p.opacity < 1 ? 1 : 0;
         mesh.userData.cell = c;
         mesh.userData.key = k;
@@ -333,12 +427,13 @@ export class VoxelMesh {
       }
       if (p.shape === 'cube' && isUnit(p.size) && isZero(p.offset)
         && NEIGHBORS.every(([dx, dy, dz]) => isCube(keyOf(c[0] + dx, c[1] + dy, c[2] + dz)))) continue;
-      const key = `${p.shape in PIECES ? p.shape : 'cube'}|${p.opacity}`;
+      const key = `${p.shape in PIECES ? p.shape : 'cube'}|${p.opacity}|${p.glow ? 1 : 0}`;
       (buckets[key] ??= []).push([c, p, k]);
       drawn?.push([c, p]);
     }
     this.edges.visible = !!drawn;
     if (drawn) this.#buildEdges(drawn);
+    this.#updateGlowLights(glowing);
 
     for (const [key, items] of Object.entries(buckets)) {
       const layer = this.layers[key];

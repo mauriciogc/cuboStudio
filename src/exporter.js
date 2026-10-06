@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { parseKey, keyOf, parseVoxel, isUnit, isZero } from './model.js';
-import { VoxelMesh, pieceGeometry, pieceTransform } from './voxel-mesh.js';
+import { VoxelMesh, pieceGeometry, pieceTransform, glowClusters, glowPieces, glowLightParams } from './voxel-mesh.js';
 import { StickerLayer } from './stickers.js';
+import { normalizeLight, sunPosition } from './stage.js';
 
 let exportRenderer = null;
 
@@ -144,16 +145,24 @@ export function renderModelImage(stage, model, {
 let thumbScene = null;
 
 /** Miniatura de una figura que no está abierta en el editor (p. ej. los ejemplos). */
+/** Miniatura de un modelo sin tocar la escena del editor, con la luz que trae la figura. */
 export function renderStandalone(model, { size = 192, type = 'image/webp', quality = 0.85 } = {}) {
   if (!thumbScene) {
     const scene = new THREE.Scene();
-    scene.add(new THREE.HemisphereLight('#ffffff', '#c7b99c', 1.9));
-    const sun = new THREE.DirectionalLight('#fff4e3', 2.1);
-    sun.position.set(8, 30, 16);
-    scene.add(sun);
-    thumbScene = { scene, voxels: new VoxelMesh(), stickers: new StickerLayer() };
+    const hemi = new THREE.HemisphereLight();
+    const sun = new THREE.DirectionalLight();
+    scene.add(hemi, sun);
+    thumbScene = { scene, hemi, sun, voxels: new VoxelMesh(), stickers: new StickerLayer() };
     scene.add(thumbScene.voxels.group, thumbScene.stickers.group);
   }
+  const l = normalizeLight(model.light);
+  thumbScene.hemi.color.set(l.amb);
+  thumbScene.hemi.groundColor.set(l.ground);
+  thumbScene.hemi.intensity = l.ambI;
+  thumbScene.sun.color.set(l.sun);
+  thumbScene.sun.intensity = l.sunI;
+  thumbScene.sun.position.set(...sunPosition(l, model.size));
+  thumbScene.voxels.setGlowStrength(l.glow);
   thumbScene.voxels.rebuild(model);
   thumbScene.stickers.rebuild(model);
   const { cam, width, height } = frameModel(model, ISO_DIRECTION, { size: size * 2, padding: 0.02, shadow: false });
@@ -164,7 +173,8 @@ export function renderStandalone(model, { size = 192, type = 'image/webp', quali
 }
 
 /** Malla sólida sin caras ocultas, con colores por vértice. */
-export function buildSolidMesh(model) {
+/** include(pieza) elige qué piezas entran (por defecto, todas). */
+export function buildSolidMesh(model, include = () => true) {
   const positions = [];
   const normals = [];
   const colors = [];
@@ -186,6 +196,7 @@ export function buildSolidMesh(model) {
   for (const [k, value] of model.voxels) {
     const p = parseKey(k);
     const piece = parseVoxel(value);
+    if (!include(piece)) continue;
     c.set(piece.color);
 
     if (piece.shape !== 'cube' || !isUnit(piece.size) || !isZero(piece.offset)) {
@@ -223,13 +234,55 @@ export function buildSolidMesh(model) {
   return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }));
 }
 
-export async function exportGLB(model, name = 'figura') {
-  const mesh = buildSolidMesh(model);
-  mesh.name = name;
+/**
+ * Modelo 3D .glb. Las piezas que brillan van con material emisivo de su color y, si se pasa
+ * la luz de la escena, se incluyen el sol y las luces de las piezas que brillan.
+ */
+export async function exportGLB(model, name = 'figura', lighting = null) {
+  const root = new THREE.Group();
+  root.name = name;
+  const meshes = [];
+  const solid = buildSolidMesh(model, (p) => !p.glow);
+  solid.name = name;
+  meshes.push(solid);
+  // Una malla por color que brilla (el brillo en glTF es por material)
+  const glowColors = new Set();
+  for (const v of model.voxels.values()) if (v.includes('*')) glowColors.add(parseVoxel(v).color);
+  for (const color of glowColors) {
+    const m = buildSolidMesh(model, (p) => p.glow && p.color === color);
+    m.material.dispose();
+    m.material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, emissive: color, emissiveIntensity: 1 });
+    m.name = `${name} brillo ${color}`;
+    meshes.push(m);
+  }
+  for (const m of meshes) if (m.geometry.getAttribute('position').count) root.add(m);
+
+  if (lighting) {
+    // Sol: la luz direccional de glTF apunta hacia su -Z
+    const a = THREE.MathUtils.degToRad(lighting.az);
+    const e = THREE.MathUtils.degToRad(lighting.el);
+    const sun = new THREE.DirectionalLight(lighting.sun, lighting.sunI);
+    sun.name = 'Sol';
+    sun.position.set(Math.cos(e) * Math.sin(a), Math.sin(e), Math.cos(e) * Math.cos(a)).multiplyScalar(model.size);
+    sun.lookAt(0, 0, 0);
+    sun.add(sun.target);
+    sun.target.position.set(0, 0, -1);
+    root.add(sun);
+    glowClusters(glowPieces(model)).forEach((z, i) => {
+      const { intensity, distance } = glowLightParams(z.count, lighting.glow);
+      const light = new THREE.PointLight(z.color, intensity, distance, 2);
+      light.name = `Brillo ${i + 1}`;
+      light.position.set(...z.pos);
+      root.add(light);
+    });
+  }
+
   const { GLTFExporter } = await import('three/addons/exporters/GLTFExporter.js');
-  const buffer = await new GLTFExporter().parseAsync(mesh, { binary: true });
-  mesh.geometry.dispose();
-  mesh.material.dispose();
+  const buffer = await new GLTFExporter().parseAsync(root, { binary: true });
+  for (const m of meshes) {
+    m.geometry.dispose();
+    m.material.dispose();
+  }
   return new Blob([buffer], { type: 'model/gltf-binary' });
 }
 

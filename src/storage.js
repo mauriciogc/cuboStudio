@@ -55,7 +55,7 @@ export const store = {
       entry = { id, createdAt: now };
       index.push(entry);
     }
-    Object.assign(entry, { name, updatedAt: now, count: data.voxels.length / 4 });
+    Object.assign(entry, { name, updatedAt: now, count: data.voxels.length / 4, bg: data.background ?? null });
     if (thumb) entry.thumb = thumb;
     write(KEY.model(id), data);
     write(KEY.index, index);
@@ -79,7 +79,11 @@ export const store = {
   set currentId(id) { write(KEY.current, id); },
 
   prefs() {
-    return { background: 'pradera', showGrid: true, recent: [], ...read(KEY.prefs, {}) };
+    const prefs = { background: 'pradera', showGrid: true, ...read(KEY.prefs, {}) };
+    delete prefs.recent; // los colores recientes ya no existen
+    delete prefs.recentOpen;
+    delete prefs.sceneOpen; // Escena ya no es acordeón
+    return prefs;
   },
 
   savePrefs(prefs) {

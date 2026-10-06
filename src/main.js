@@ -1,6 +1,6 @@
 import './style.css';
 import * as THREE from 'three';
-import { Stage, BACKGROUNDS } from './stage.js';
+import { Stage, BACKGROUNDS, LIGHT_PRESETS, DEFAULT_LIGHT } from './stage.js';
 import { Editor, TOOLS } from './editor.js';
 import { VoxelModel, GRID_SIZES, PIECES, parseKey, parseVoxel, pieceWorldBoxes } from './model.js';
 import { store, refStore, isQuotaError } from './storage.js';
@@ -145,7 +145,7 @@ function saveNow() {
   saveTimer = null;
   if (!current.id) return false;
   try {
-    store.save({ id: current.id, name: current.name, data: { ...editor.model.serialize(), bevel: prefs.bevel ?? 'soft' }, thumb: makeThumb() });
+    store.save({ id: current.id, name: current.name, data: { ...editor.model.serialize(), bevel: prefs.bevel ?? 'soft', light: stage.lighting, background: stage.backgroundName }, thumb: makeThumb() });
     store.currentId = current.id;
     saveStatus.textContent = 'Guardado';
     return true;
@@ -239,30 +239,6 @@ function renderPalette() {
   $('#palette').innerHTML = PALETTE.map((c) => swatchHTML(c)).join('');
 }
 
-function renderRecent() {
-  // Cada reciente lleva una × para quitarlo de la lista (no cambia la figura)
-  $('#recent').innerHTML = prefs.recent.map((c) => `<span class="recent-item">${swatchHTML(c)}`
-    + `<button class="recent-x" data-remove="${c}" aria-label="Quitar ${c.toUpperCase()} de recientes">${icon('x')}</button></span>`).join('');
-  $('#recent-section').hidden = prefs.recent.length === 0;
-}
-
-function removeRecent(c) {
-  prefs.recent = c ? prefs.recent.filter((r) => r !== c) : [];
-  store.savePrefs(prefs);
-  renderRecent();
-}
-$('#recent').addEventListener('click', (e) => {
-  const x = e.target.closest('[data-remove]');
-  if (x) removeRecent(x.dataset.remove);
-});
-$('#recent-clear').addEventListener('click', () => removeRecent(null));
-
-function addRecent(c) {
-  if (PALETTE.includes(c)) return;
-  prefs.recent = [c, ...prefs.recent.filter((r) => r !== c)].slice(0, 12);
-  store.savePrefs(prefs);
-  renderRecent();
-}
 
 function renderModelColors() {
   const colors = editor.model.colors();
@@ -307,7 +283,18 @@ function syncPanels() {
   const stickerSelected = selecting && !!editor.selected;
   const piecesSelected = selecting && !stickerSelected && editor.selection.size > 0;
   $('#sticker-section').hidden = !(editor.tool === 'sticker' || stickerSelected);
-  $('#piece-section').hidden = !(['build', 'box'].includes(editor.tool) || piecesSelected);
+  const pieceVisible = ['build', 'box'].includes(editor.tool) || piecesSelected;
+  $('#piece-section').hidden = !pieceVisible;
+  // Color y "En esta figura": al crear o editar piezas, y con las herramientas que usan color
+  // (pintar, rellenar, calcomanías)
+  const usesColor = pieceVisible || stickerSelected || ['paint', 'fill', 'sticker'].includes(editor.tool);
+  $('#color-section').hidden = !usesColor;
+  $('#figure-colors-section').hidden = !usesColor;
+  // Escena (cuadrícula, fondo, luz, orillas…) es de toda la figura: sale justo cuando no está
+  // "Forma de la pieza" (ni construyendo ni con piezas o una calcomanía seleccionadas)
+  const sceneHidden = pieceVisible || stickerSelected;
+  $('#scene-section').hidden = sceneHidden;
+  if (sceneHidden) closePops();
 }
 
 // ---------- barra de selección (herramienta Seleccionar) ----------
@@ -378,6 +365,102 @@ function syncOpacity() {
   const o = Math.round(editor.shownOpacity * 100);
   if (!opacityDragging) $('#opacity').value = o;
   $('#opacity-value').textContent = `${o}%`;
+  $('#glow').checked = editor.shownGlow;
+}
+$('#glow').addEventListener('change', (e) => editor.setGlow(e.target.checked));
+
+// ---------- luz ----------
+// La luz va con cada figura (se guarda, se exporta y se importa con ella)
+const lightSwatch = (l) => `linear-gradient(135deg, ${l.amb} 0 48%, ${l.sun} 52%)`;
+$('#light-presets').innerHTML = Object.entries(LIGHT_PRESETS).map(([id, p]) =>
+  `<button class="light-preset" role="radio" data-preset="${id}"><i style="background:${lightSwatch(p)}"></i>${p.label}</button>`).join('');
+// Ajustar: abre/cierra el recuadro con los controles finos
+$('#light-adjust').addEventListener('click', () => {
+  const open = $('#light-panel').hidden;
+  $('#light-panel').hidden = !open;
+  $('#light-adjust').classList.toggle('active', open);
+  $('#light-adjust').setAttribute('aria-expanded', open);
+});
+
+function applyLighting(light, { save = true } = {}) {
+  const l = stage.setLighting(light);
+  editor.voxelMesh.setGlowStrength(l.glow);
+  editor.model.light = l;
+  syncLightUI();
+  if (save) scheduleSave();
+}
+
+function syncLightUI() {
+  const l = stage.lighting;
+  $('#light-dot').style.background = lightSwatch(l);
+  $('#light-name').textContent = LIGHT_PRESETS[l.preset]?.label ?? 'Personalizada';
+  document.querySelectorAll('#light-presets [data-preset]').forEach((b) => {
+    const on = b.dataset.preset === l.preset;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-checked', on);
+  });
+  $('#sun-color').value = l.sun;
+  $('#sun-color').parentElement.style.background = l.sun;
+  $('#sun-intensity').value = l.sunI;
+  $('#sun-az').value = l.az;
+  $('#sun-el').value = l.el;
+  $('#sun-shadows').checked = l.shadows;
+  $('#sun-soft').disabled = !l.shadows;
+  $('#sun-soft').value = l.soft;
+  $('#amb-color').value = l.amb;
+  $('#amb-color').parentElement.style.background = l.amb;
+  $('#amb-intensity').value = l.ambI;
+  $('#glow-strength').value = l.glow;
+}
+
+$('#light-presets').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-preset]');
+  if (!b) return;
+  closePops();
+  applyLighting({ preset: b.dataset.preset });
+  // De noche, cielo de noche (y al volver de día, el fondo de siempre). Luego se puede cambiar a mano.
+  const night = b.dataset.preset === 'noche';
+  if (night !== (prefs.background === 'noche')) {
+    prefs.background = night ? 'noche' : 'pradera';
+    store.savePrefs(prefs);
+    applyPrefs();
+    editor.model.background = prefs.background;
+    scheduleSave();
+  }
+});
+// Ajustes finos: al mover cualquiera, la luz queda "personalizada"
+const LIGHT_INPUTS = {
+  'sun-color': ['sun', (el) => el.value],
+  'sun-intensity': ['sunI', (el) => Number(el.value)],
+  'sun-az': ['az', (el) => Number(el.value)],
+  'sun-el': ['el', (el) => Number(el.value)],
+  'sun-shadows': ['shadows', (el) => el.checked],
+  'sun-soft': ['soft', (el) => Number(el.value)],
+  'amb-color': ['amb', (el) => el.value],
+  'amb-intensity': ['ambI', (el) => Number(el.value)],
+  'glow-strength': ['glow', (el) => Number(el.value)],
+};
+for (const [id, [prop, read]] of Object.entries(LIGHT_INPUTS)) {
+  $(`#${id}`).addEventListener('input', (e) => applyLighting({ ...stage.lighting, preset: null, [prop]: read(e.target) }));
+}
+$('#light-reset').addEventListener('click', () => applyLighting({ preset: DEFAULT_LIGHT }));
+// Al abrir o importar una figura se usa su luz (las que no traen, luz de día)
+editor.addEventListener('load', () => {
+  applyLighting(editor.model.light ?? { preset: DEFAULT_LIGHT }, { save: false });
+  // …y su fondo (las que no traen, como los ejemplos, con el de siempre: pradera)
+  const bg = editor.model.background in BACKGROUNDS ? editor.model.background : 'pradera';
+  if (bg !== prefs.background) {
+    prefs.background = bg;
+    store.savePrefs(prefs);
+    applyPrefs();
+  }
+  editor.model.background = prefs.background;
+});
+
+/** Fondo de la tarjeta de galería: el color de fondo de esa figura. */
+function thumbStyle(bg) {
+  const color = (BACKGROUNDS[bg] ?? BACKGROUNDS.pradera).color;
+  return `background: linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.06)), ${color}`;
 }
 editor.addEventListener('selection', syncColor);
 editor.addEventListener('change', () => { if (editor.selection.size || editor.selected) syncColor(); });
@@ -393,7 +476,6 @@ $('#opacity').addEventListener('change', (e) => {
   editor.setOpacity(Number(e.target.value) / 100);
 });
 $('#color-input').addEventListener('input', (e) => editor.setColor(e.target.value));
-$('#color-input').addEventListener('change', (e) => addRecent(e.target.value.toLowerCase()));
 $('#hex-input').addEventListener('input', (e) => {
   let v = e.target.value.trim();
   if (!v.startsWith('#')) v = `#${v}`;
@@ -401,7 +483,6 @@ $('#hex-input').addEventListener('input', (e) => {
 });
 $('#hex-input').addEventListener('change', () => {
   $('#hex-input').value = editor.color.toUpperCase();
-  addRecent(editor.color);
 });
 
 $('#tools').addEventListener('click', (e) => {
@@ -494,6 +575,8 @@ $('#bg-options').addEventListener('click', (e) => {
   store.savePrefs(prefs);
   closePops();
   applyPrefs();
+  editor.model.background = prefs.background; // el fondo va con la figura
+  scheduleSave();
 });
 
 $('#bevel-mode').innerHTML = Object.entries(BEVELS).map(([id, b]) =>
@@ -596,7 +679,7 @@ function renderGallery() {
   $('#gallery-note').textContent = `${list.length} ${list.length === 1 ? 'figura' : 'figuras'} · ${kb} KB usados`;
   $('#gallery').innerHTML = list.length ? list.map((e) => `
     <div class="card ${e.id === current.id ? 'current' : ''}" data-id="${e.id}" tabindex="0">
-      <div class="thumb checker">${e.thumb ? `<img src="${e.thumb}" alt="">` : ''}</div>
+      <div class="thumb" style="${thumbStyle(e.bg)}">${e.thumb ? `<img src="${e.thumb}" alt="">` : ''}</div>
       <div class="meta">
         <div class="name">${esc(e.name)}</div>
         <div class="muted small">${e.count} piezas · ${formatDate(e.updatedAt)}</div>
@@ -663,7 +746,7 @@ async function renderExamples() {
     const size = ex.size ?? info?.size;
     const pieces = ex.pieces ?? info?.pieces;
     return `<div class="card example" data-example="${ex.id}" tabindex="0" title="Abrir una copia de ${esc(ex.name)}">
-      <div class="thumb">${src ? `<img src="${src}" alt="">` : ''}</div>
+      <div class="thumb" style="${thumbStyle(ex.background)}">${src ? `<img src="${src}" alt="">` : ''}</div>
       <span class="badge">${size ? `${size}×${size}` : 'Ejemplo'}</span>
       <div class="meta"><div class="name">${esc(ex.name)}</div><div class="muted small">${pieces != null ? `${pieces.toLocaleString('es')} piezas` : '&nbsp;'}</div></div>
     </div>`;
@@ -782,14 +865,16 @@ $('#btn-copy-png').addEventListener('click', async () => {
 });
 $('#btn-download-glb').addEventListener('click', async () => {
   try {
-    download(await exportGLB(editor.model, current.name), `${slugify(current.name)}.glb`);
+    download(await exportGLB(editor.model, current.name, stage.lighting), `${slugify(current.name)}.glb`);
   } catch (err) {
     console.error(err);
     toast('No se pudo exportar el modelo 3D', 'error');
   }
 });
 $('#btn-download-json').addEventListener('click', () => {
-  const data = { ...editor.model.serialize(), bevel: prefs.bevel ?? 'soft', name: current.name };
+  const data = {
+    ...editor.model.serialize(), bevel: prefs.bevel ?? 'soft', light: stage.lighting, background: stage.backgroundName, name: current.name,
+  };
   download(new Blob([JSON.stringify(data)], { type: 'application/json' }), `${slugify(current.name)}.cubos.json`);
 });
 
@@ -848,7 +933,10 @@ const TOOL_KEYS = Object.fromEntries(Object.entries(TOOLS).map(([id, t]) => [t.k
 const VIEW_KEYS = { 1: 'iso', 2: 'front', 3: 'side', 4: 'back', 5: 'top' };
 
 window.addEventListener('keydown', (e) => {
-  const typing = e.target.closest?.('input, select, textarea');
+  // Los atajos se apagan sólo al escribir (texto, listas); en casillas y deslizadores siguen
+  // funcionando, salvo las flechas en un deslizador, que lo mueven a él
+  const typing = e.target.closest?.('input:not([type=checkbox]):not([type=range]):not([type=color]), select, textarea')
+    || (e.target.matches?.('input[type=range]') && /^(Arrow|Page|Home|End)/.test(e.key));
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
 
@@ -1134,7 +1222,6 @@ syncRefsGlobal();
 
 // ---------- arranque ----------
 renderPalette();
-renderRecent();
 renderStickers();
 applyPrefs();
 syncTools();

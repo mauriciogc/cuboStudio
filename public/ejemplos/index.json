@@ -1,0 +1,98 @@
+[
+  {
+    "id": "raton",
+    "name": "Ratón eléctrico",
+    "file": "raton.json",
+    "thumb": "raton.webp",
+    "size": 16,
+    "pieces": 220
+  },
+  {
+    "id": "pollo",
+    "name": "Pollo",
+    "file": "pollo.json",
+    "thumb": "pollo.webp",
+    "size": 24,
+    "pieces": 138
+  },
+  {
+    "id": "pato",
+    "name": "Patos",
+    "file": "pato.json",
+    "thumb": "pato.webp",
+    "size": 32,
+    "pieces": 43
+  },
+  {
+    "id": "gato",
+    "name": "Gato",
+    "file": "gato.json",
+    "thumb": "gato.webp",
+    "size": 24,
+    "pieces": 428
+  },
+  {
+    "id": "perrito",
+    "name": "Perrito",
+    "file": "perrito.json",
+    "thumb": "perrito.webp",
+    "size": 24,
+    "pieces": 867
+  },
+  {
+    "id": "robot",
+    "name": "Robot DJ",
+    "file": "robot.json",
+    "thumb": "robot.webp",
+    "size": 16,
+    "pieces": 19
+  },
+  {
+    "id": "llama",
+    "name": "Llama",
+    "file": "llama.json",
+    "thumb": "llama.webp",
+    "size": 24,
+    "pieces": 183
+  },
+  {
+    "id": "vaca",
+    "name": "Vaca",
+    "file": "vaca.json",
+    "thumb": "vaca.webp",
+    "size": 24,
+    "pieces": 13
+  },
+  {
+    "id": "pajarito",
+    "name": "Cardenal",
+    "file": "pajarito.json",
+    "thumb": "pajarito.webp",
+    "size": 16,
+    "pieces": 13
+  },
+  {
+    "id": "isla",
+    "name": "Isla pequeña",
+    "file": "isla.json",
+    "thumb": "isla.webp",
+    "size": 32,
+    "pieces": 129
+  },
+  {
+    "id": "voxel-world",
+    "name": "Voxel world",
+    "file": "voxel-world.json",
+    "thumb": "voxel-world.webp",
+    "size": 24,
+    "pieces": 2083
+  },
+  {
+    "id": "isla-grande",
+    "name": "Isla grande",
+    "file": "isla-grande.json",
+    "thumb": "isla-grande.webp",
+    "size": 128,
+    "pieces": 12727
+  }
+]

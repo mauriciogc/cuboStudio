@@ -1,35 +1,19 @@
 [
   {
+    "id": "pajarito",
+    "name": "Cardenal",
+    "file": "pajarito.json",
+    "thumb": "pajarito.webp",
+    "size": 16,
+    "pieces": 13
+  },
+  {
     "id": "raton",
     "name": "Ratón eléctrico",
     "file": "raton.json",
     "thumb": "raton.webp",
     "size": 16,
     "pieces": 220
-  },
-  {
-    "id": "pollo",
-    "name": "Pollo",
-    "file": "pollo.json",
-    "thumb": "pollo.webp",
-    "size": 24,
-    "pieces": 138
-  },
-  {
-    "id": "pato",
-    "name": "Patos",
-    "file": "pato.json",
-    "thumb": "pato.webp",
-    "size": 32,
-    "pieces": 43
-  },
-  {
-    "id": "gato",
-    "name": "Gato",
-    "file": "gato.json",
-    "thumb": "gato.webp",
-    "size": 24,
-    "pieces": 428
   },
   {
     "id": "perrito",
@@ -40,12 +24,45 @@
     "pieces": 867
   },
   {
+    "id": "vaca",
+    "name": "Vaca",
+    "file": "vaca.json",
+    "thumb": "vaca.webp",
+    "size": 24,
+    "pieces": 13
+  },
+  {
+    "id": "gato",
+    "name": "Gato",
+    "file": "gato.json",
+    "thumb": "gato.webp",
+    "size": 24,
+    "pieces": 428
+  },
+  {
     "id": "robot",
     "name": "Robot DJ",
     "file": "robot.json",
     "thumb": "robot.webp",
     "size": 16,
     "pieces": 19
+  },
+  {
+    "id": "calavera",
+    "name": "Calavera",
+    "file": "calavera.json",
+    "thumb": "calavera.webp",
+    "size": 24,
+    "pieces": 2512,
+    "background": "noche"
+  },
+  {
+    "id": "pollo",
+    "name": "Pollo",
+    "file": "pollo.json",
+    "thumb": "pollo.webp",
+    "size": 24,
+    "pieces": 138
   },
   {
     "id": "llama",
@@ -56,20 +73,12 @@
     "pieces": 183
   },
   {
-    "id": "vaca",
-    "name": "Vaca",
-    "file": "vaca.json",
-    "thumb": "vaca.webp",
-    "size": 24,
-    "pieces": 13
-  },
-  {
-    "id": "pajarito",
-    "name": "Cardenal",
-    "file": "pajarito.json",
-    "thumb": "pajarito.webp",
-    "size": 16,
-    "pieces": 13
+    "id": "pato",
+    "name": "Patos",
+    "file": "pato.json",
+    "thumb": "pato.webp",
+    "size": 32,
+    "pieces": 43
   },
   {
     "id": "isla",

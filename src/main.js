@@ -7,9 +7,10 @@ import { store, refStore, isQuotaError } from './storage.js';
 import { ReferenceLayer, REF_SLOTS, prepareImage } from './references.js';
 import { WorkPlane, PLANE_AXES } from './workplane.js';
 import { SelectionGizmo } from './gizmo.js';
+import { SunGizmo } from './sun-gizmo.js';
 import { BEVELS, setBevel } from './voxel-mesh.js';
 import {
-  renderModelImage, renderStandalone, exportGLB, download, dataURLToBlob, slugify, ISO_DIRECTION,
+  renderModelImage, renderStandalone, renderFormatImage, IMAGE_FORMATS, exportGLB, download, dataURLToBlob, slugify, ISO_DIRECTION,
 } from './exporter.js';
 import { PALETTE } from './palette.js';
 import { listExamples, loadExample, thumbUrl } from './examples.js';
@@ -35,6 +36,8 @@ const refs = new ReferenceLayer(stage);
 const workplane = new WorkPlane(stage);
 editor.workplane = workplane;
 const gizmo = new SelectionGizmo(stage, editor);
+// Sol arrastrable (herramienta U): orienta la luz de la figura
+const sunGizmo = new SunGizmo(stage, editor);
 gizmo.addEventListener('blocked', () => toast('No cabe ahí: choca con otra pieza o sale de la cuadrícula'));
 gizmo.addEventListener('size', (e) => {
   $('#stat-hover').textContent = e.detail ? `Tamaño ${e.detail.map((v) => +v.toFixed(2)).join(' × ')}` : '';
@@ -252,6 +255,7 @@ function syncModel() {
   $('#btn-undo').disabled = !editor.canUndo;
   $('#btn-redo').disabled = !editor.canRedo;
   syncGridSize();
+  sunGizmo.update();
   renderModelColors();
 }
 
@@ -375,12 +379,12 @@ const lightSwatch = (l) => `linear-gradient(135deg, ${l.amb} 0 48%, ${l.sun} 52%
 $('#light-presets').innerHTML = Object.entries(LIGHT_PRESETS).map(([id, p]) =>
   `<button class="light-preset" role="radio" data-preset="${id}"><i style="background:${lightSwatch(p)}"></i>${p.label}</button>`).join('');
 // Ajustar: abre/cierra el recuadro con los controles finos
-$('#light-adjust').addEventListener('click', () => {
-  const open = $('#light-panel').hidden;
+function setLightPanel(open) {
   $('#light-panel').hidden = !open;
   $('#light-adjust').classList.toggle('active', open);
   $('#light-adjust').setAttribute('aria-expanded', open);
-});
+}
+$('#light-adjust').addEventListener('click', () => setLightPanel($('#light-panel').hidden));
 
 function applyLighting(light, { save = true } = {}) {
   const l = stage.setLighting(light);
@@ -392,6 +396,7 @@ function applyLighting(light, { save = true } = {}) {
 
 function syncLightUI() {
   const l = stage.lighting;
+  sunGizmo.update();
   $('#light-dot').style.background = lightSwatch(l);
   $('#light-name').textContent = LIGHT_PRESETS[l.preset]?.label ?? 'Personalizada';
   document.querySelectorAll('#light-presets [data-preset]').forEach((b) => {
@@ -496,6 +501,37 @@ function toggleEdges() {
   applyPrefs();
 }
 $('#btn-edges').addEventListener('click', toggleEdges);
+
+// Mover el sol: al arrastrarlo, la luz pasa a personalizada (se guarda al soltar)
+function toggleSun() {
+  sunGizmo.setEnabled(!sunGizmo.enabled);
+  $('#btn-sun').classList.toggle('active', sunGizmo.enabled);
+  if (!sunGizmo.enabled) return;
+  showSunControls();
+  toast('Arrastra el sol para cambiar de dónde viene la luz');
+}
+
+/**
+ * Siempre que se activa o se agarra el sol: puntero (para no construir sin querer),
+ * sin selección (para que se vea Escena) y los ajustes de luz abiertos y a la vista.
+ */
+function showSunControls() {
+  if (editor.tool !== 'select') editor.setTool('select');
+  editor.clearSelection();
+  editor.select(null);
+  setLightPanel(true);
+  requestAnimationFrame(() => {
+    const r = $('#light-block').getBoundingClientRect();
+    const panel = $('aside.panel').getBoundingClientRect();
+    if (r.top < panel.top || r.bottom > panel.bottom) $('#light-block').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+sunGizmo.addEventListener('start', showSunControls);
+$('#btn-sun').addEventListener('click', toggleSun);
+sunGizmo.addEventListener('change', (e) => {
+  const { az, el, done } = e.detail;
+  applyLighting({ ...stage.lighting, preset: null, az, el }, { save: done });
+});
 $('#btn-undo').addEventListener('click', () => editor.undo());
 $('#btn-redo').addEventListener('click', () => editor.redo());
 
@@ -824,15 +860,37 @@ $('#btn-new').addEventListener('click', () => {
 // Exportar
 let lastExport = null;
 
+// Formatos: libres (ajustado a la figura, como en pantalla) y de redes/pantallas (tamaño fijo)
+$('#export-format').innerHTML = `
+  <option value="fit">Ajustado a la figura</option>
+  <option value="screen">Tal como se ve en pantalla</option>
+  <optgroup label="Redes y pantallas">
+    ${Object.entries(IMAGE_FORMATS).map(([id, f]) => `<option value="${id}">${f.label}</option>`).join('')}
+  </optgroup>`;
+$('#export-format').value = prefs.exportFormat in IMAGE_FORMATS || ['fit', 'screen'].includes(prefs.exportFormat) ? prefs.exportFormat : 'fit';
+let exportFigure = prefs.exportFigure ?? 'medium';
+if ($('#export-format').value in IMAGE_FORMATS) $('#export-transparent').checked = false;
+
+function syncExportFields() {
+  const fmt = $('#export-format').value;
+  const fixed = fmt in IMAGE_FORMATS;
+  $('#export-angle-field').hidden = fmt === 'screen';
+  $('#export-size-field').hidden = fixed;
+  $('#export-figure-field').hidden = !fixed;
+  document.querySelectorAll('#export-figure [data-figure]').forEach((b) => b.classList.toggle('active', b.dataset.figure === exportFigure));
+}
+
 function renderExportPreview() {
-  const size = Number($('#export-size').value);
-  lastExport = renderModelImage(stage, editor.model, {
-    size,
+  syncExportFields();
+  const fmt = $('#export-format').value;
+  const opts = {
     transparent: $('#export-transparent').checked,
     shadow: $('#export-shadow').checked,
     direction: $('#export-angle').value === 'iso' ? ISO_DIRECTION : stage.viewDirection(),
-    mode: $('#export-angle').value === 'screen' ? 'screen' : 'fit',
-  });
+  };
+  lastExport = fmt in IMAGE_FORMATS
+    ? renderFormatImage(stage, editor.model, { ...opts, format: fmt, figure: exportFigure })
+    : renderModelImage(stage, editor.model, { ...opts, size: Number($('#export-size').value), mode: fmt === 'screen' ? 'screen' : 'fit' });
   $('#export-img').src = lastExport.url;
   $('#export-dims').textContent = `${lastExport.width} × ${lastExport.height} px`;
   $('#export-preview').classList.toggle('checker', $('#export-transparent').checked);
@@ -840,6 +898,22 @@ function renderExportPreview() {
 
 ['#export-size', '#export-angle', '#export-transparent', '#export-shadow'].forEach((s) =>
   $(s).addEventListener('change', renderExportPreview));
+$('#export-format').addEventListener('change', () => {
+  const fmt = $('#export-format').value;
+  // Para redes, de entrada con el fondo de la escena (se puede volver a transparente)
+  if (fmt in IMAGE_FORMATS) $('#export-transparent').checked = false;
+  prefs.exportFormat = fmt;
+  store.savePrefs(prefs);
+  renderExportPreview();
+});
+$('#export-figure').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-figure]');
+  if (!b) return;
+  exportFigure = b.dataset.figure;
+  prefs.exportFigure = exportFigure;
+  store.savePrefs(prefs);
+  renderExportPreview();
+});
 
 function openExport() {
   if (!editor.model.count) {
@@ -986,6 +1060,7 @@ window.addEventListener('keydown', (e) => {
   else if (VIEW_KEYS[key]) stage.setView(VIEW_KEYS[key], editor.model.bounds());
   else if (key === 'm') editor.setMirror(!editor.mirror);
   else if (key === 'l') toggleEdges();
+  else if (key === 'u') toggleSun();
   else if (key === 'f') stage.frame(editor.model.bounds());
   else if (key === 'g') $('#btn-gallery').click();
   else if (key === 'h') refs.setGlobal({ visible: !refs.visible });

@@ -107,6 +107,9 @@ Está en **Escena**: un selector de ambiente (como el de Fondo) y el botón **Aj
   - **Sol:** color, intensidad, giro y altura (de dónde caen las sombras), sombras y su suavidad.
   - **Ambiente:** color e intensidad.
   - **Piezas que brillan:** fuerza de su luz.
+- **Mover el sol (U):** botón de la barra de herramientas que muestra el cubo del espacio de trabajo y un sol
+  sobre él. Arrástralo por los lados y el techo del cubo (sin salirse): la luz va del sol al centro del piso,
+  con las sombras en vivo. No sale al exportar.
 - Las piezas que brillan cercanas comparten luz: hay hasta 8 luces, repartidas por zonas.
 - La luz se **guarda con cada figura** y sale en las imágenes exportadas. El `.glb` lleva el sol, las luces
   de las piezas que brillan y su material emisivo.
@@ -126,7 +129,10 @@ Sale cuando no estás creando ni editando piezas (es lo de toda la figura).
 - **Mis figuras (G):** varias figuras con miniatura (con su luz y su fondo), guardadas solas en el navegador; se pueden duplicar o eliminar.
 - **Ejemplos:** pestaña dentro de Mis figuras; al abrir uno se crea una copia editable.
 - **Exportar (Ctrl+E):**
-  - Imagen PNG tal como se ve en pantalla, o recortada a la figura (vista actual o isométrica).
+  - Imagen PNG ajustada a la figura, tal como se ve en pantalla, o en un **formato fijo** para redes y
+    pantallas: cuadrado 1:1, vertical 4:5, historia 9:16, fondo de iPhone, clásico 4:3 / 3:4 y horizontal 16:9.
+    En los formatos fijos la figura va centrada (chica, mediana o grande) sobre el fondo de la escena, con su
+    luz; la sombra sigue hasta donde llegue y se corta en la orilla de la imagen.
   - Fondo transparente o de color, sombra opcional, de 512 a 2048 px; también copiar al portapapeles.
   - Modelo 3D `.glb`.
   - Proyecto `.json`.
@@ -199,6 +205,7 @@ Cada ejemplo se descarga sólo cuando hace falta.
 | `src/compound.js` | Geometría de piezas fusionadas: unión de cajas en una malla con bisel curvo |
 | `src/editor.js` | Herramientas, raycast, vista previa, selección, grupos, fusionar, copiar/pegar e historial |
 | `src/gizmo.js` | Gizmo de mover/girar, manijas de escalar e imanes |
+| `src/sun-gizmo.js` | Sol arrastrable para orientar la luz |
 | `src/stage.js` | Renderer, cámara, luces, piso, fondos y vistas |
 | `src/exporter.js` | PNG (pantalla o recortado), GLB y miniaturas |
 | `src/stickers.js` | Calcomanías: diseños en canvas, texturas y colocación por cara |

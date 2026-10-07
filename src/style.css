@@ -204,7 +204,6 @@ svg { width: 18px; height: 18px; flex: none; }
 .pill-sep { width: 1px; height: 16px; background: var(--border); margin: 0 2px; }
 
 /* ---------- espacio 3D ---------- */
-.tool.toggle.space.active { background: var(--accent); }
 .space-bar {
   position: absolute; left: 50%; bottom: 60px; transform: translateX(-50%); z-index: 3;
   display: flex; align-items: center; gap: 8px;
@@ -487,6 +486,10 @@ kbd {
 
 /* ---------- exportar ---------- */
 .export-options .field select { max-width: 190px; min-width: 0; }
+.export-options .field.stacked { flex-direction: column; align-items: stretch; gap: 6px; }
+.export-options .field.stacked select { max-width: none; width: 100%; }
+#export-figure { margin: 0; flex: 1; max-width: 190px; }
+#export-figure .seg { font-size: 12px; padding: 5px 0; }
 
 /* ---------- forma de la pieza (mismo tamaño que los colores) ---------- */
 #piece-grid .piece-btn {

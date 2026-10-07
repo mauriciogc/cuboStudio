@@ -29,7 +29,9 @@ function frameModel(model, direction, { size, padding, shadow }) {
   const b = model.bounds() ?? { min: [-1, 0, -1], max: [1, 2, 1] };
   const min = new THREE.Vector3(...b.min);
   const max = new THREE.Vector3(...b.max);
-  if (shadow) { min.x -= 0.6; min.z -= 0.6; max.x += 0.6; max.z += 0.6; }
+  if (shadow) {
+    min.x -= 0.6; min.z -= 0.6; max.x += 0.6; max.z += 0.6;
+  }
   const center = min.clone().add(max).multiplyScalar(0.5);
   const reach = min.distanceTo(max) + 10;
 
@@ -140,6 +142,62 @@ export function renderModelImage(stage, model, {
   }
   const out = trimToCanvas(r.domElement, { size, margin, background: transparent ? null : stage.backgroundColor });
   return { url: out.toDataURL(type, quality), width: out.width, height: out.height };
+}
+
+// Formatos de imagen para redes y pantallas: tamaño fijo en px; y = dónde va el centro de la
+// figura (0.5 = al centro; en el fondo de iPhone baja para que no la tape el reloj)
+export const IMAGE_FORMATS = {
+  square: { label: 'Cuadrado 1:1 · post de Instagram', w: 1080, h: 1080 },
+  portrait: { label: 'Vertical 4:5 · feed de Instagram', w: 1080, h: 1350 },
+  story: { label: 'Historia 9:16 · Reels, TikTok, WhatsApp', w: 1080, h: 1920 },
+  iphone: { label: 'Fondo de iPhone', w: 1179, h: 2556, y: 0.6 },
+  classic: { label: 'Clásico 4:3', w: 1600, h: 1200 },
+  classicV: { label: 'Clásico vertical 3:4', w: 1200, h: 1600 },
+  wide: { label: 'Horizontal 16:9 · YouTube, compu', w: 1920, h: 1080 },
+};
+/** Qué tanto del lienzo ocupa la figura (de su lado que más ocupa). */
+export const FIGURE_SIZES = { small: 0.5, medium: 0.7, large: 0.88 };
+
+/**
+ * Imagen en un formato fijo (IMAGE_FORMATS): la figura recortada, centrada y escalada dentro
+ * del lienzo, sobre el color de fondo de la escena (o transparente).
+ */
+export function renderFormatImage(stage, model, {
+  format = 'square', figure = 'medium', transparent = false, shadow = true,
+  direction = stage.viewDirection(), type = 'image/png', quality,
+} = {}) {
+  const f = IMAGE_FORMATS[format] ?? IMAGE_FORMATS.square;
+  const k = FIGURE_SIZES[figure] ?? FIGURE_SIZES.medium;
+  // Encuadre sólo con la figura (sin su sombra): la sombra sigue hasta donde llegue
+  // y se corta en la orilla de la imagen
+  const { cam } = frameModel(model, direction, { size: 1000, padding: 0, shadow: false });
+  const cx = (cam.left + cam.right) / 2;
+  const cy = (cam.top + cam.bottom) / 2;
+  const px = Math.min((f.w * k) / (cam.right - cam.left), (f.h * k) / (cam.top - cam.bottom)); // px por unidad
+  const yc = f.h * (f.y ?? 0.5); // dónde va el centro de la figura (desde arriba)
+  Object.assign(cam, {
+    left: cx - f.w / 2 / px, right: cx + f.w / 2 / px,
+    top: cy + yc / px, bottom: cy - (f.h - yc) / px,
+  });
+  cam.updateProjectionMatrix();
+
+  // Se renderiza más grande y se reduce: orillas suaves, sin rayitas entre cubos
+  const ss = Math.min(2, 4096 / Math.max(f.w, f.h));
+  const r = getRenderer();
+  r.setSize(Math.round(f.w * ss), Math.round(f.h * ss), false);
+  const restore = stage.prepareExport({ transparent, shadow });
+  try {
+    r.render(stage.scene, cam);
+    const out = document.createElement('canvas');
+    out.width = f.w;
+    out.height = f.h;
+    const ctx = out.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(r.domElement, 0, 0, f.w, f.h);
+    return { url: out.toDataURL(type, quality), width: f.w, height: f.h };
+  } finally {
+    restore();
+  }
 }
 
 let thumbScene = null;

@@ -84,7 +84,13 @@ El panel de la derecha muestra sólo lo que sirve para lo que estás haciendo:
 
 ## Ayudas para modelar
 
-- **Espejo X (M):** lo que construyes, pintas o borras se repite del otro lado.
+- **Espejo X (M):** lo que construyes, pintas o borras se repite del otro lado. Además, cada pieza tiene
+  su **pareja** (la idéntica en la posición reflejada), que se resalta en un azul más claro y cambia con ella:
+  - Mover: a los lados al revés; arriba/abajo y adelante/atrás igual. Girar y escalar, reflejados.
+  - Color, opacidad, brillo, forma, eliminar, fusionar y separar: igual en las dos.
+  - Agrupar: un grupo por lado. Copiar toma un lado; pegar crea también el reflejo.
+  - Las piezas al centro (su propia pareja) no se corren a los lados y crecen parejo.
+  - Una pieza sin otra idéntica del lado contrario no tiene pareja y se edita sola. Con el espejo apagado, todo se edita solo.
 - **Marcar orillas (L):** dibuja el contorno de cada pieza para distinguirlas (útil con orillas rectas).
   Sólo se ve al modelar, no sale al exportar.
 - **Espacio 3D (V):** un plano para poner cubos flotantes; Q / W cambian de capa.

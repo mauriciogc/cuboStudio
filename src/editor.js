@@ -35,6 +35,57 @@ const _hit = new THREE.Vector3();
 const _v = new THREE.Vector3();
 
 /**
+ * Unión de cajas [[min, tamaño], …] como la menor cantidad de cajas posible (de x, luego y, luego z).
+ * Devuelve { lo, hi, out: [[x,y,z,w,h,d] relativas a lo] } o { error }.
+ */
+/** Reflejo de un punto en el plano del espejo (x = 0). */
+const MIRROR_X = ([x, y, z]) => [-x, y, z];
+
+function unionBoxes(boxes) {
+  // Rejilla para rasterizar: de 1 si todo está en cubos enteros; si no, de 0.1
+  const integral = boxes.every(([a, sz]) => [...a, ...sz].every((v) => Number.isInteger(snapStep(v))));
+  const step = integral ? 1 : 0.1;
+  const lo = [0, 1, 2].map((i) => Math.min(...boxes.map(([a]) => a[i])));
+  const hi = [0, 1, 2].map((i) => Math.max(...boxes.map(([a, sz]) => a[i] + sz[i])));
+  const n = hi.map((v, i) => Math.round((v - lo[i]) / step));
+  if (n[0] * n[1] * n[2] > 400000) return { error: 'Es demasiado grande para fusionar con piezas de tamaño fino' };
+  const idx = (x, y, z) => (z * n[1] + y) * n[0] + x;
+  const grid = new Uint8Array(n[0] * n[1] * n[2]);
+  for (const [a, sz] of boxes) {
+    const i0 = a.map((v, i) => Math.round((v - lo[i]) / step));
+    const i1 = a.map((v, i) => Math.round((v + sz[i] - lo[i]) / step));
+    for (let z = i0[2]; z < i1[2]; z++) for (let y = i0[1]; y < i1[1]; y++) for (let x = i0[0]; x < i1[0]; x++) grid[idx(x, y, z)] = 1;
+  }
+  // Cajas mínimas (unión voraz en x, luego y, luego z)
+  const used = new Uint8Array(grid.length);
+  const free = (x, y, z) => grid[idx(x, y, z)] && !used[idx(x, y, z)];
+  const out = [];
+  for (let z = 0; z < n[2]; z++) {
+    for (let y = 0; y < n[1]; y++) {
+      for (let x = 0; x < n[0]; x++) {
+        if (!free(x, y, z)) continue;
+        let w = 1;
+        while (x + w < n[0] && free(x + w, y, z)) w++;
+        let h = 1;
+        grow: while (y + h < n[1]) {
+          for (let dx = 0; dx < w; dx++) if (!free(x + dx, y + h, z)) break grow;
+          h++;
+        }
+        let d = 1;
+        deep: while (z + d < n[2]) {
+          for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) if (!free(x + dx, y + dy, z + d)) break deep;
+          d++;
+        }
+        for (let dz = 0; dz < d; dz++) for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) used[idx(x + dx, y + dy, z + dz)] = 1;
+        out.push([x * step, y * step, z * step, w * step, h * step, d * step].map(snapStep));
+      }
+    }
+  }
+
+  return { lo, hi, out };
+}
+
+/**
  * Lógica de edición: herramientas, espejo, historial y transformación.
  * Eventos: 'change', 'load', 'tool', 'color', 'mirror', 'sticker', 'piece', 'selection', 'hover', 'notice'.
  */
@@ -210,6 +261,7 @@ export class Editor extends EventTarget {
     this.selected = null;
     this.selection.clear();
     this.model = model;
+    this.version = (this.version ?? 0) + 1;
     this.undoStack = [];
     this.redoStack = [];
     this.stage.setGridSize(model.size);
@@ -371,9 +423,14 @@ export class Editor extends EventTarget {
    * Devuelve [celda, valor] o null si sale de la cuadrícula.
    */
   #movedPiece(k, point) {
-    const p = parseVoxel(this.model.voxels.get(k));
-    if (isCompound(p)) return this.#movedCompound(k, p, point);
-    const center = parseKey(k).map((c, i) => c + p.offset[i] + p.size[i] / 2);
+    return this.#movedValue(parseKey(k), this.model.voxels.get(k), point);
+  }
+
+  /** Igual que #movedPiece, pero de una pieza dada por su celda y su valor (aún sin poner). */
+  #movedValue(cell0, value, point) {
+    const p = parseVoxel(value);
+    if (isCompound(p)) return this.#movedCompound(cell0, p, point);
+    const center = cell0.map((c, i) => c + p.offset[i] + p.size[i] / 2);
     const mc = point(center);
     const lin = (d) => point(center.map((c, i) => c + d[i])).map((c, i) => c - mc[i]);
     // Tamaño: se permuta con el giro (pasos de 0.1)
@@ -392,8 +449,8 @@ export class Editor extends EventTarget {
   }
 
   /** Pieza compuesta movida/girada: se transforman sus cajas y se recalcula su forma. */
-  #movedCompound(k, p, point) {
-    const world = pieceWorldBoxes(parseKey(k), p).map(([m, s]) => {
+  #movedCompound(cell0, p, point) {
+    const world = pieceWorldBoxes(cell0, p).map(([m, s]) => {
       const a = point(m);
       const b = point(m.map((v, i) => v + s[i]));
       return [a.map((v, i) => Math.min(v, b[i])), a.map((v, i) => Math.abs(b[i] - v))];
@@ -493,6 +550,76 @@ export class Editor extends EventTarget {
     const { up, back } = pieceAxes(f, t);
     return orientationFrom(flip(up), flip(back));
   }
+
+  // ---------- espejo: cada pieza y su pareja del otro lado ----------
+
+  /** Firma para reconocer la pareja: la pieza sin su grupo (las fusionadas, por la forma que ocupan). */
+  #pieceSignature(cell, value) {
+    const p = parseVoxel(value);
+    if (!isCompound(p)) return `${keyOf(...cell)}|${value.split('|')[0]}`;
+    const u = unionBoxes(pieceWorldBoxes(cell, p));
+    if (u.error) return `${keyOf(...cell)}|${value.split('|')[0]}`;
+    return `${p.fill}|${u.lo.map(snapStep)}|${u.out.map((b) => b.join(',')).join(';')}`;
+  }
+
+  /** La pareja de la pieza k al otro lado del espejo (la misma k si está al centro), o null. */
+  #pairOf(k) {
+    const res = this.#movedPiece(k, MIRROR_X);
+    if (!res) return null;
+    const [cell, v] = res;
+    const want = this.#pieceSignature(cell, v);
+    const base = keyOf(...cell);
+    for (let i = 0; i < 16; i++) {
+      const key = i ? `${base}#${i}` : base;
+      const cv = this.model.voxels.get(key);
+      if (cv !== undefined && this.#pieceSignature(cell, cv) === want) return key;
+    }
+    return null;
+  }
+
+  /**
+   * Con el espejo activo, la selección se reparte en:
+   * - followers: las parejas de lo seleccionado, que se editan reflejadas;
+   * - selfs: piezas al centro (son su propia pareja), que no se corren a los lados.
+   * Las piezas sin pareja se editan solas. (Se recuerda mientras no cambie nada.)
+   */
+  #mirrorSplit() {
+    const empty = { followers: new Set(), selfs: new Set() };
+    if (!this.mirror || !this.selection.size) return empty;
+    const id = `${this.version}|${[...this.selection].join(' ')}`;
+    if (this.splitCache?.id === id) return this.splitCache.split;
+    const followers = new Set();
+    const selfs = new Set();
+    const leaders = new Set();
+    for (const k of this.selection) {
+      if (followers.has(k)) continue;
+      const pk = this.#pairOf(k);
+      if (pk === k) { selfs.add(k); continue; }
+      leaders.add(k);
+      if (pk && !leaders.has(pk)) followers.add(pk);
+    }
+    const split = { followers, selfs };
+    this.splitCache = { id, split };
+    return split;
+  }
+
+  /** Parejas reflejadas de la selección (con espejo activo). */
+  get mirrorFollowers() { return [...this.#mirrorSplit().followers]; }
+
+  /** Lo que mueve el gizmo: la selección sin las parejas reflejadas. */
+  get mirrorLeaders() {
+    const { followers } = this.#mirrorSplit();
+    return [...this.selection].filter((k) => !followers.has(k));
+  }
+
+  /** Piezas seleccionadas que están al centro del espejo (son su propia pareja). */
+  get mirrorSelfs() { return [...this.#mirrorSplit().selfs]; }
+
+  /** [[calcomanía, pieza], …] pegadas a las piezas `keys` (para la vista previa del gizmo). */
+  stickersFor(keys) { return this.#stickersOf(new Set(keys)); }
+
+  /** Pareja de la pieza k (k misma si está al centro), sólo con el espejo activo. */
+  mirrorPartner(k) { return this.mirror ? this.#pairOf(k) : null; }
 
   /** Celda + orientación {f, t} y, con espejo, su reflejo. */
   /** [[celda, orientación, desplazamiento|null], …] con el reflejo si el espejo está activo. */
@@ -1003,7 +1130,13 @@ export class Editor extends EventTarget {
   }
 
   #showSelection() {
-    this.#showBoxes('selMesh', [...this.selection], '#4fa3e0', 0.3).visible = !this.transforming;
+    const { followers } = this.#mirrorSplit();
+    const lead = followers.size ? [...this.selection].filter((k) => !followers.has(k)) : [...this.selection];
+    this.#showBoxes('selMesh', lead, '#4fa3e0', 0.3).visible = !this.transforming;
+    // La pareja reflejada (con espejo) en un azul más claro
+    if (followers.size || this.pairMesh) {
+      this.#showBoxes('pairMesh', [...followers], '#9fd0f2', 0.22).visible = !this.transforming && followers.size > 0;
+    }
   }
 
   /** piece/f opcionales: muestra la forma de la pieza en vez de una caja. */
@@ -1289,10 +1422,14 @@ export class Editor extends EventTarget {
     this.#refreshGhost();
   }
 
-  /** Reescribe cada pieza seleccionada con fn(pieza) -> pieza. */
+  /** Reescribe cada pieza seleccionada (y, con espejo, su pareja) con fn(pieza) -> pieza. */
   #mapSelection(fn) {
+    this.#mapKeys([...this.selection, ...this.#mirrorSplit().followers], fn);
+  }
+
+  #mapKeys(keys, fn) {
     const changes = new Map();
-    for (const k of this.selection) {
+    for (const k of keys) {
       const p = fn(parseVoxel(this.model.voxels.get(k)));
       changes.set(k, makeVoxel(p.fill, p.shape, p.f, p.t, p.size, p.offset, p.group));
     }
@@ -1334,50 +1471,31 @@ export class Editor extends EventTarget {
    */
   mergeSelection() {
     if (!this.canMerge) return { error: 'Para fusionar, todo debe ser cubos del mismo color' };
+    // Con espejo, la pareja se fusiona igual (en su propia pieza)
+    const { followers } = this.#mirrorSplit();
+    const leaders = [...this.selection].filter((k) => !followers.has(k));
+    const res = this.#mergeKeys(leaders);
+    if (res.error) return res;
+    if (followers.size === leaders.length) {
+      const pair = this.#mergeKeys([...followers], new Set([res.key]));
+      if (!pair.error) for (const [k, v] of pair.changes) if (!res.changes.has(k) || v !== null) res.changes.set(k, v);
+    }
+    this.selection = new Set([res.key]);
+    this.apply(res.changes);
+    this.#emit('selection');
+    return { compound: res.compound, from: leaders.length };
+  }
+
+  /** Cambios para fusionar las piezas `keys` en una sola: { changes, key, compound } o { error }. */
+  #mergeKeys(keys, reserved = new Set()) {
     const m = this.model;
-    const items = [...this.selection].map((k) => [k, parseVoxel(m.voxels.get(k))]);
+    const items = keys.map((k) => [k, parseVoxel(m.voxels.get(k))]);
     const fill = items[0][1].fill;
     const boxes = items.flatMap(([k, p]) => pieceWorldBoxes(parseKey(k), p));
 
-    // Rejilla para rasterizar: de 1 si todo está en cubos enteros; si no, de 0.1
-    const integral = boxes.every(([a, sz]) => [...a, ...sz].every((v) => Number.isInteger(snapStep(v))));
-    const step = integral ? 1 : 0.1;
-    const lo = [0, 1, 2].map((i) => Math.min(...boxes.map(([a]) => a[i])));
-    const hi = [0, 1, 2].map((i) => Math.max(...boxes.map(([a, sz]) => a[i] + sz[i])));
-    const n = hi.map((v, i) => Math.round((v - lo[i]) / step));
-    if (n[0] * n[1] * n[2] > 400000) return { error: 'Es demasiado grande para fusionar con piezas de tamaño fino' };
-    const idx = (x, y, z) => (z * n[1] + y) * n[0] + x;
-    const grid = new Uint8Array(n[0] * n[1] * n[2]);
-    for (const [a, sz] of boxes) {
-      const i0 = a.map((v, i) => Math.round((v - lo[i]) / step));
-      const i1 = a.map((v, i) => Math.round((v + sz[i] - lo[i]) / step));
-      for (let z = i0[2]; z < i1[2]; z++) for (let y = i0[1]; y < i1[1]; y++) for (let x = i0[0]; x < i1[0]; x++) grid[idx(x, y, z)] = 1;
-    }
-    // Cajas mínimas (unión voraz en x, luego y, luego z)
-    const used = new Uint8Array(grid.length);
-    const free = (x, y, z) => grid[idx(x, y, z)] && !used[idx(x, y, z)];
-    const out = [];
-    for (let z = 0; z < n[2]; z++) {
-      for (let y = 0; y < n[1]; y++) {
-        for (let x = 0; x < n[0]; x++) {
-          if (!free(x, y, z)) continue;
-          let w = 1;
-          while (x + w < n[0] && free(x + w, y, z)) w++;
-          let h = 1;
-          grow: while (y + h < n[1]) {
-            for (let dx = 0; dx < w; dx++) if (!free(x + dx, y + h, z)) break grow;
-            h++;
-          }
-          let d = 1;
-          deep: while (z + d < n[2]) {
-            for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) if (!free(x + dx, y + dy, z + d)) break deep;
-            d++;
-          }
-          for (let dz = 0; dz < d; dz++) for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) used[idx(x + dx, y + dy, z + dz)] = 1;
-          out.push([x * step, y * step, z * step, w * step, h * step, d * step].map(snapStep));
-        }
-      }
-    }
+    const union = unionBoxes(boxes);
+    if (union.error) return union;
+    const { lo, hi, out } = union;
 
     const min = lo.map(snapStep);
     const size = hi.map((v, i) => snapStep(v - lo[i]));
@@ -1387,12 +1505,9 @@ export class Editor extends EventTarget {
     const shape = compound ? makeCompoundShape(out) : 'cube';
     const changes = new Map();
     for (const [k] of items) changes.set(k, null);
-    const k = m.freeKey(cell, new Set(items.map(([key]) => key)));
+    const k = m.freeKey(cell, new Set([...items.map(([key]) => key), ...reserved]));
     changes.set(k, makeVoxel(fill, shape, 2, 0, size, offset, null));
-    this.selection = new Set([k]);
-    this.apply(changes);
-    this.#emit('selection');
-    return { compound, from: items.length };
+    return { changes, key: k, compound };
   }
 
   /** Separa una pieza compuesta en sus bloques (quedan agrupados). */
@@ -1416,16 +1531,17 @@ export class Editor extends EventTarget {
     };
     const keys = [];
     const kept = [];
+    const followers = this.#mirrorSplit().followers; // con espejo, la pareja también se separa
     const cuts = (a, b) => {
       const out = [a];
       for (let c = Math.floor(a + 1e-6) + 1; c < b - 1e-6; c++) out.push(c);
       out.push(b);
       return out;
     };
-    for (const k of this.selection) {
+    for (const k of [...this.selection, ...followers]) {
       const p = parseVoxel(m.voxels.get(k));
       if (!this.#splittable(p)) {
-        kept.push(k);
+        if (this.selection.has(k)) kept.push(k);
         continue;
       }
       changes.set(k, null);
@@ -1474,8 +1590,20 @@ export class Editor extends EventTarget {
 
   groupSelection() {
     if (!this.canGroup) return false;
+    const { followers } = this.#mirrorSplit();
     const group = this.model.newGroupId();
-    this.#mapSelection((p) => ({ ...p, group }));
+    const changes = new Map();
+    const put = (k, g) => {
+      const p = parseVoxel(this.model.voxels.get(k));
+      changes.set(k, makeVoxel(p.fill, p.shape, p.f, p.t, p.size, p.offset, g));
+    };
+    for (const k of this.selection) if (!followers.has(k)) put(k, group);
+    // Con espejo, la pareja forma su propio grupo (un grupo por lado)
+    if (followers.size) {
+      const other = this.model.newGroupId([group]);
+      for (const k of followers) put(k, other);
+    }
+    this.apply(changes);
     this.#emit('selection');
     return true;
   }
@@ -1496,19 +1624,22 @@ export class Editor extends EventTarget {
   copySelection() {
     if (!this.selection.size) return null;
     const m = this.model;
+    // Con espejo se copia un solo lado: al pegar, el otro se crea reflejado
+    const followers = this.#mirrorSplit().followers;
+    const sel = new Set([...this.selection].filter((k) => !followers.has(k)));
     const min = [Infinity, Infinity, Infinity];
     const max = [-Infinity, -Infinity, -Infinity];
-    for (const k of this.selection) {
+    for (const k of sel) {
       const p = parseVoxel(m.voxels.get(k));
       for (const c of pieceCells(parseKey(k), p.size, p.offset)) {
         c.forEach((v, i) => { min[i] = Math.min(min[i], v); max[i] = Math.max(max[i], v + 1); });
       }
     }
-    const items = [...this.selection].map((k) => [...parseKey(k).map((v, i) => v - min[i]), m.voxels.get(k)]);
+    const items = [...sel].map((k) => [...parseKey(k).map((v, i) => v - min[i]), m.voxels.get(k)]);
     const stickers = [];
     for (const [sk, st] of m.stickers) {
       const owner = m.pieceAt(...m.stickerCell(sk, 'behind'));
-      if (!owner || !this.selection.has(owner)) continue;
+      if (!owner || !sel.has(owner)) continue;
       const { p, f } = parseStickerKey(sk);
       stickers.push([p.map((v, i) => v - min[i]), f, st]);
     }
@@ -1546,8 +1677,31 @@ export class Editor extends EventTarget {
       if (p.group && !regroup.has(p.group)) regroup.set(p.group, m.newGroupId(regroup.values()));
       changes.set(k, p.group ? makeVoxel(p.fill, p.shape, p.f, p.t, p.size, p.offset, regroup.get(p.group)) : v);
     }
+    const pastedStickers = [];
     for (const [dp, f, st] of clip.stickers ?? []) {
-      changes.set(stickerKey(dp.map((v, i) => v + origin[i]), f), st);
+      const sk = stickerKey(dp.map((v, i) => v + origin[i]), f);
+      changes.set(sk, st);
+      pastedStickers.push(sk);
+    }
+    // Con espejo, lo pegado también aparece reflejado del otro lado (con su propio grupo)
+    if (this.mirror) {
+      const regroupM = new Map();
+      for (const k of keys) {
+        const v = changes.get(k);
+        const res = this.#movedValue(parseKey(k), v, MIRROR_X);
+        if (!res) continue;
+        const [mc, mv] = res;
+        if (this.#pieceSignature(mc, mv) === this.#pieceSignature(parseKey(k), v)) continue; // al centro
+        const p = parseVoxel(mv);
+        if (p.group && !regroupM.has(p.group)) regroupM.set(p.group, m.newGroupId([...regroup.values(), ...regroupM.values()]));
+        const mk = m.freeKey(mc, taken);
+        taken.add(mk);
+        changes.set(mk, p.group ? makeVoxel(p.fill, p.shape, p.f, p.t, p.size, p.offset, regroupM.get(p.group)) : mv);
+      }
+      for (const sk of pastedStickers) {
+        const mk = this.#mirrorStickerKey(sk);
+        if (mk !== sk) changes.set(mk, { ...changes.get(sk), flip: !changes.get(sk).flip });
+      }
     }
     this.select(null);
     this.selection = new Set(keys);
@@ -1565,7 +1719,7 @@ export class Editor extends EventTarget {
 
   deleteSelection() {
     if (!this.selection.size) return false;
-    const keys = [...this.selection];
+    const keys = [...this.selection, ...this.#mirrorSplit().followers];
     this.selection.clear();
     this.apply(this.#eraseChanges(keys));
     this.#emit('selection');
@@ -1584,22 +1738,36 @@ export class Editor extends EventTarget {
     return parseVoxel(this.model.voxels.get(k)).size;
   }
 
-  /** Coloca la pieza seleccionada en la caja (esquina mínima, tamaño). Falla si sale de la cuadrícula. */
+  /**
+   * Coloca la pieza seleccionada en la caja (esquina mínima, tamaño). Con espejo, su pareja
+   * queda en la caja reflejada y una pieza al centro crece parejo a los dos lados.
+   * Falla si sale de la cuadrícula.
+   */
   setSelectedBox(min, size) {
     if (this.selection.size !== 1) return false;
     const [k] = this.selection;
-    const p = parseVoxel(this.model.voxels.get(k));
+    const { followers, selfs } = this.#mirrorSplit();
     const s = size.map((v) => Math.min(this.model.size, Math.max(MIN_PIECE, snapStep(v))));
     const q = min.map(snapStep);
-    const cell = q.map((v) => Math.floor(v + 1e-6));
-    const offset = q.map((v, i) => snapStep(v - cell[i]));
-    if (!pieceCells(cell, s, offset).every((c) => this.model.inBounds(...c))) return false;
-    const same = keyOf(...parseKey(k)) === keyOf(...cell);
-    const nk = same ? k : this.model.freeKey(cell);
+    if (selfs.has(k)) q[0] = snapStep(-s[0] / 2);
+    const boxes = [[k, q]];
+    for (const fk of followers) boxes.push([fk, [snapStep(-(q[0] + s[0])), q[1], q[2]]]);
     const changes = new Map();
-    if (nk !== k) changes.set(k, null);
-    changes.set(nk, makeVoxel(p.fill, p.shape, p.f, p.t, s, offset, p.group));
-    this.selection = new Set([nk]);
+    const taken = new Set();
+    let newKey = k;
+    for (const [key, m] of boxes) {
+      const p = parseVoxel(this.model.voxels.get(key));
+      const cell = m.map((v) => Math.floor(v + 1e-6));
+      const offset = m.map((v, i) => snapStep(v - cell[i]));
+      if (!pieceCells(cell, s, offset).every((c) => this.model.inBounds(...c))) return false;
+      const same = keyOf(...parseKey(key)) === keyOf(...cell);
+      const nk = same ? key : this.model.freeKey(cell, taken);
+      taken.add(nk);
+      if (nk !== key && !changes.has(key)) changes.set(key, null);
+      changes.set(nk, makeVoxel(p.fill, p.shape, p.f, p.t, s, offset, p.group));
+      if (key === k) newKey = nk;
+    }
+    this.selection = new Set([newKey]);
     this.apply(changes);
     this.#emit('selection');
     return true;
@@ -1624,51 +1792,72 @@ export class Editor extends EventTarget {
    */
   /** Calcomanías pegadas a las piezas seleccionadas (viajan con ellas). */
   get attachedStickers() {
-    if (!this.selection.size) return [];
+    return this.#stickersOf(this.selection).map(([sk]) => sk);
+  }
+
+  /** [[calcomanía, pieza que la sostiene], …] de las piezas `keys`. */
+  #stickersOf(keys) {
+    if (!keys.size) return [];
     const out = [];
     for (const sk of this.model.stickers.keys()) {
       const owner = this.model.pieceAt(...this.model.stickerCell(sk, 'behind'));
-      if (owner && this.selection.has(owner)) out.push(sk);
+      if (owner && keys.has(owner)) out.push([sk, owner]);
     }
     return out;
   }
 
+  /**
+   * Transforma la selección con la función afín de puntos `point` (mover o girar).
+   * Con espejo: la pareja se transforma reflejada (a los lados al revés, arriba/abajo y
+   * adelante/atrás igual) y las piezas al centro no se corren a los lados.
+   * Falla (sin cambios) si algo sale de la cuadrícula.
+   */
   transformSelection(point) {
-    const stickers = this.attachedStickers; // antes de mover: aún saben a qué pieza están pegadas
+    const { followers, selfs } = this.#mirrorSplit();
+    const mirrored = (c) => MIRROR_X(point(MIRROR_X(c)));
+    const d0 = point([0, 0, 0]);
+    const isMove = [[1, 0, 0], [0, 1, 0], [0, 0, 1]].every((e) => point(e).every((v, i) => Math.abs(v - e[i] - d0[i]) < 1e-9));
+    const centered = isMove ? (c) => [c[0], c[1] + d0[1], c[2] + d0[2]] : point;
+    // Cada pieza con su transformación
+    const plan = new Map();
+    for (const k of this.selection) plan.set(k, followers.has(k) ? mirrored : selfs.has(k) ? centered : point);
+    for (const k of followers) plan.set(k, mirrored);
+    const stickers = this.#stickersOf(new Set(plan.keys())); // antes de mover: aún saben a qué pieza están pegadas
+
     const moved = [];
-    for (const k of this.selection) {
-      const res = this.#movedPiece(k, point);
+    for (const [k, fn] of plan) {
+      const res = this.#movedPiece(k, fn);
       if (!res) return false;
-      moved.push(res);
+      moved.push([k, ...res]);
     }
     // Claves nuevas: si otra pieza ya empieza en esa celda, se comparte ("x,y,z#n")
     const taken = new Set();
-    const others = (k) => this.model.voxels.has(k) && !this.selection.has(k);
-    const resolved = moved.map(([cell, v]) => {
+    const others = (k) => this.model.voxels.has(k) && !plan.has(k);
+    const changes = new Map();
+    for (const k of plan.keys()) changes.set(k, null);
+    const renamed = new Map();
+    const adds = [];
+    for (const [k, cell, v] of moved) {
       const base = keyOf(...cell);
       let nk = base;
       for (let i = 1; others(nk) || taken.has(nk); i++) nk = `${base}#${i}`;
       taken.add(nk);
-      return [nk, v];
-    });
-    moved.length = 0;
-    moved.push(...resolved);
-    const changes = new Map();
-    for (const k of this.selection) changes.set(k, null);
+      renamed.set(k, nk);
+      adds.push([nk, v]);
+    }
     // Las calcomanías de esas piezas se mueven / giran con ellas
-    const stickerAdds = [];
-    for (const sk of stickers) {
+    for (const [sk, owner] of stickers) {
+      const fn = plan.get(owner);
       const { p, f } = parseStickerKey(sk);
       const n = FACE_NORMALS[f];
-      const mp = point(p).map((v) => Math.round(v * 1000) / 1000); // limpiar decimales sin correrla
-      const tip = point(p.map((v, i) => v + n[i]));
+      const mp = fn(p).map((v) => Math.round(v * 1000) / 1000); // limpiar decimales sin correrla
+      const tip = fn(p.map((v, i) => v + n[i]));
       const mn = tip.map((v, i) => Math.round(v - mp[i]));
       changes.set(sk, null);
-      stickerAdds.push([stickerKey(mp, faceIndex(mn)), this.model.stickers.get(sk)]);
+      adds.push([stickerKey(mp, faceIndex(mn)), this.model.stickers.get(sk)]);
     }
-    for (const [k, v] of moved) changes.set(k, v);
-    for (const [k, v] of stickerAdds) changes.set(k, v);
-    this.selection = new Set(moved.map(([k]) => k));
+    for (const [k, v] of adds) changes.set(k, v);
+    this.selection = new Set([...this.selection].map((k) => renamed.get(k)));
     this.apply(changes);
     this.#emit('selection');
     return true;
@@ -1702,6 +1891,7 @@ export class Editor extends EventTarget {
   }
 
   #changed() {
+    this.version = (this.version ?? 0) + 1;
     this.#rebuild();
     if (this.selected && !this.model.stickers.has(this.selected)) {
       this.selected = null;

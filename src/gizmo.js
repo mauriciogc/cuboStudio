@@ -59,6 +59,15 @@ export class SelectionGizmo extends EventTarget {
     this.preview = new THREE.Group();
     this.pivot.add(this.preview);
     stage.scene.add(this.pivot);
+    // Con espejo: la pareja se ve reflejada mientras arrastras, y las piezas al centro no se
+    // corren a los lados. Sus hijos van en coordenadas del mundo; el grupo aplica el movimiento.
+    this.mirrorPreview = new THREE.Group();
+    this.selfPreview = new THREE.Group();
+    for (const g of [this.mirrorPreview, this.selfPreview]) {
+      g.matrixAutoUpdate = false;
+      stage.scene.add(g);
+      stage.helpers.push(g);
+    }
 
     const tc = new TransformControls(stage.camera, stage.renderer.domElement);
     tc.setTranslationSnap(1);
@@ -98,6 +107,7 @@ export class SelectionGizmo extends EventTarget {
       if (this.editor.canMoveSelectedBy(d)) this.lastValid = d;
       else this.pivot.position.copy(this.start).add(new THREE.Vector3(...this.lastValid));
     });
+    tc.addEventListener('objectChange', () => this.#syncMirrorPreview());
     tc.addEventListener('dragging-changed', (e) => {
       stage.controls.enabled = !e.value;
       if (e.value) this.#begin();
@@ -189,7 +199,7 @@ export class SelectionGizmo extends EventTarget {
     }
     const min = [Infinity, Infinity, Infinity];
     const max = [-Infinity, -Infinity, -Infinity];
-    for (const k of selection) {
+    for (const k of this.editor.mirrorLeaders) { // con espejo, sin la pareja reflejada
       parseKey(k).forEach((v, i) => { min[i] = Math.min(min[i], v); max[i] = Math.max(max[i], v); });
     }
     // Centro en el centro de una celda: así los giros de 90° caen en la cuadrícula
@@ -413,8 +423,20 @@ export class SelectionGizmo extends EventTarget {
     mesh.matrixAutoUpdate = false;
     this.preview.add(mesh);
     this.faceMesh = mesh;
+    // Con espejo: la pareja crece reflejada; una pieza al centro crece parejo a los dos lados
+    const partner = this.editor.mirrorPartner(key);
+    d.self = partner === key;
+    d.follower = partner && partner !== key ? partner : null;
+    this.pairMesh = null;
+    if (d.follower) {
+      this.pairMesh = new THREE.Mesh(mesh.geometry, mesh.material);
+      this.pairMesh.matrixAutoUpdate = false;
+      this.mirrorPreview.matrix.identity();
+      this.mirrorPreview.matrixWorldNeedsUpdate = true;
+      this.mirrorPreview.add(this.pairMesh);
+    }
     this.editor.transforming = true;
-    this.editor.setHidden(new Set([key]));
+    this.editor.setHidden(new Set([key, d.follower].filter(Boolean)));
     this.#updateFaceDrag();
   }
 
@@ -444,8 +466,10 @@ export class SelectionGizmo extends EventTarget {
       factor = Math.min(factor, ...room.map((r, i) => r / d.size0[i]));
       const size = d.size0.map((s, i) => Math.min(room[i], Math.max(MIN_PIECE, snapStep(s * factor))));
       const min = d.min0.map((v, i) => (d.corner[i] < 0 ? snapStep(v + d.size0[i] - size[i]) : v));
+      if (d.self) min[0] = snapStep(-size[0] / 2);
       d.size = size;
       d.min = min;
+      this.#placePair(min, size);
       pieceMatrix(min, { ...d.p, size, offset: [0, 0, 0] }, this.faceMesh.matrix);
       this.#placeHandles(min, size);
       this.#snapFeedback(mg.snapped);
@@ -476,12 +500,14 @@ export class SelectionGizmo extends EventTarget {
     // Hasta la orilla de la cuadrícula (la cara opuesta queda fija)
     const [blo, bhi] = this.#gridBounds();
     const room = d.sign > 0 ? bhi[a] - d.min0[a] : d.min0[a] + d.size0[a] - blo[a];
-    const want = d.size0[a] + grow;
+    const want = d.size0[a] + (d.self && a === 0 ? 2 * grow : grow);
     const targets = [...intsAround(want), ...(d.contacts ?? [])];
     size[a] = Math.min(room, Math.max(MIN_PIECE, snapStep(magnet(want, targets).value)));
     if (d.sign < 0) min[a] = snapStep(d.min0[a] + d.size0[a] - size[a]); // la cara opuesta queda fija
+    if (d.self && a === 0) min[0] = snapStep(-size[0] / 2);
     d.size = size;
     d.min = min;
+    this.#placePair(min, size);
     pieceMatrix(min, { ...d.p, size, offset: [0, 0, 0] }, this.faceMesh.matrix);
     this.#placeHandles(min, size);
     this.#snapFeedback(targets.some((t) => Math.abs(t - size[a]) < 1e-6));
@@ -500,10 +526,20 @@ export class SelectionGizmo extends EventTarget {
     d.whole = whole;
   }
 
+  /** Vista previa de la pareja reflejada al escalar. */
+  #placePair(min, size) {
+    if (!this.pairMesh) return;
+    const d = this.faceDrag;
+    pieceMatrix(min, { ...d.p, size, offset: [0, 0, 0] }, this.pairMesh.matrix);
+    this.pairMesh.matrix.premultiply(new THREE.Matrix4().makeScale(-1, 1, 1));
+  }
+
   #onFaceUp(e) {
     if (!this.faceDrag) return;
     const d = this.faceDrag;
     this.faceDrag = null;
+    this.mirrorPreview.clear();
+    this.pairMesh = null;
     this.stage.controls.enabled = true;
     const el = this.stage.renderer.domElement;
     if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
@@ -546,51 +582,114 @@ export class SelectionGizmo extends EventTarget {
       this.editor.refreshHover?.();
       return;
     }
-    // Vista previa: copias reales de las piezas (con su tamaño), que viajan con el gizmo
-    for (const k of this.editor.selection) {
-      const p = parseVoxel(this.editor.model.voxels.get(k));
+    // Vista previa: copias reales de las piezas (con su tamaño), que viajan con el gizmo.
+    // Con espejo, la pareja va reflejada y las piezas al centro no se corren a los lados.
+    const ed = this.editor;
+    const followers = ed.mirrorFollowers;
+    const selfs = new Set(ed.mirrorSelfs);
+    const leaders = ed.mirrorLeaders.filter((k) => !selfs.has(k));
+    this.pivot.updateMatrixWorld();
+    this.P0inv = this.pivot.matrixWorld.clone().invert();
+    const pieceMesh = (k) => {
+      const p = parseVoxel(ed.model.voxels.get(k));
       const mesh = new THREE.Mesh(pieceGeometry(p), material(p.color));
       mesh.matrixAutoUpdate = false;
       pieceTransform(parseKey(k), p, mesh.matrix);
+      mesh.castShadow = true;
+      this.baseSize = p.size;
+      return mesh;
+    };
+    for (const k of leaders) {
+      const mesh = pieceMesh(k);
       mesh.matrix.elements[12] -= this.start.x;
       mesh.matrix.elements[13] -= this.start.y;
       mesh.matrix.elements[14] -= this.start.z;
-      mesh.castShadow = true;
       this.preview.add(mesh);
-      this.baseSize = p.size;
     }
+    for (const k of followers) this.mirrorPreview.add(pieceMesh(k));
+    for (const k of selfs) this.selfPreview.add(pieceMesh(k));
     // Las calcomanías pegadas a esas piezas también viajan en la vista previa
-    const stickerKeys = new Set(this.editor.attachedStickers);
-    for (const sk of stickerKeys) {
+    const groupOf = (owner) => (selfs.has(owner) ? this.selfPreview : followers.includes(owner) ? this.mirrorPreview : null);
+    const stickerPairs = ed.stickersFor([...leaders, ...followers, ...selfs]);
+    for (const [sk, owner] of stickerPairs) {
       const { p, f } = parseStickerKey(sk);
-      const mesh = createStickerMesh(this.editor.model.stickers.get(sk));
+      const mesh = createStickerMesh(ed.model.stickers.get(sk));
       placeStickerMesh(mesh, p, f);
-      mesh.position.sub(this.start);
-      this.preview.add(mesh);
-    }
-    this.hiddenStickers = this.editor.stickerLayer.group.children.filter((m) => stickerKeys.has(m.userData.stickerKey));
-    this.hiddenStickers.forEach((m) => { m.visible = false; });
-    this.editor.transforming = true;
-    this.editor.setHidden(new Set(this.editor.selection));
-    // Cuánto se puede mover la selección en cada eje sin salirse de la cuadrícula
-    const min = [Infinity, Infinity, Infinity];
-    const max = [-Infinity, -Infinity, -Infinity];
-    for (const k of this.editor.selection) {
-      for (const [m, s] of pieceWorldBoxes(parseKey(k), parseVoxel(this.editor.model.voxels.get(k)))) {
-        m.forEach((v, i) => { min[i] = Math.min(min[i], v); max[i] = Math.max(max[i], v + s[i]); });
+      const g = groupOf(owner);
+      if (g) g.add(mesh);
+      else {
+        mesh.position.sub(this.start);
+        this.preview.add(mesh);
       }
     }
+    const stickerKeys = new Set(stickerPairs.map(([sk]) => sk));
+    this.hiddenStickers = ed.stickerLayer.group.children.filter((m) => stickerKeys.has(m.userData.stickerKey));
+    this.hiddenStickers.forEach((m) => { m.visible = false; });
+    ed.transforming = true;
+    ed.setHidden(new Set([...ed.selection, ...followers]));
+    this.#syncMirrorPreview();
+
+    // Cuánto se puede mover sin salirse de la cuadrícula (la pareja se mueve al revés en x;
+    // las piezas al centro no se mueven en x)
+    const boxOf = (keys) => {
+      const lo = [Infinity, Infinity, Infinity];
+      const hi = [-Infinity, -Infinity, -Infinity];
+      for (const k of keys) {
+        for (const [m, s] of pieceWorldBoxes(parseKey(k), parseVoxel(ed.model.voxels.get(k)))) {
+          m.forEach((v, i) => { lo[i] = Math.min(lo[i], v); hi[i] = Math.max(hi[i], v + s[i]); });
+        }
+      }
+      return lo[0] === Infinity ? null : [lo, hi];
+    };
     const [blo, bhi] = this.#gridBounds();
-    this.moveRange = min[0] === Infinity ? null
-      : [blo.map((v, i) => Math.min(0, v - min[i])), bhi.map((v, i) => Math.max(0, v - max[i]))];
+    const lead = boxOf(leaders.length ? leaders : [...selfs]);
+    const pair = boxOf(followers);
+    const center = boxOf([...selfs]);
+    let range = null;
+    if (lead) {
+      const lo = blo.map((v, i) => v - lead[0][i]);
+      const hi = bhi.map((v, i) => v - lead[1][i]);
+      if (pair) {
+        lo[0] = Math.max(lo[0], pair[1][0] - bhi[0]);
+        hi[0] = Math.min(hi[0], pair[0][0] - blo[0]);
+        for (const i of [1, 2]) { lo[i] = Math.max(lo[i], blo[i] - pair[0][i]); hi[i] = Math.min(hi[i], bhi[i] - pair[1][i]); }
+      }
+      if (center) {
+        for (const i of [1, 2]) { lo[i] = Math.max(lo[i], blo[i] - center[0][i]); hi[i] = Math.min(hi[i], bhi[i] - center[1][i]); }
+        if (!leaders.length) { lo[0] = 0; hi[0] = 0; } // sólo piezas al centro: no se corren a los lados
+      }
+      range = [lo.map((v) => Math.min(0, v)), hi.map((v) => Math.max(0, v))];
+    }
+    this.moveRange = range;
+    const [min, max] = lead ?? [[0, 0, 0], [0, 0, 0]];
     this.selBox = [min, max];
     this.others = this.#otherBoxes();
     this.wasSnapped = false;
   }
 
+  /**
+   * Pareja reflejada y piezas al centro durante el arrastre: el movimiento del gizmo (rel)
+   * se aplica reflejado (S·rel·S) a la pareja; a las del centro, sin la parte en x al mover.
+   */
+  #syncMirrorPreview() {
+    if (!this.dragging || !this.P0inv) return;
+    this.pivot.updateMatrixWorld();
+    const rel = new THREE.Matrix4().multiplyMatrices(this.pivot.matrixWorld, this.P0inv);
+    const S = new THREE.Matrix4().makeScale(-1, 1, 1);
+    this.mirrorPreview.matrix.copy(S).multiply(rel).multiply(S);
+    if (this.mode === 'translate') {
+      const e = rel.elements;
+      this.selfPreview.matrix.makeTranslation(0, e[13], e[14]);
+    } else {
+      this.selfPreview.matrix.copy(rel);
+    }
+    this.mirrorPreview.matrixWorldNeedsUpdate = true;
+    this.selfPreview.matrixWorldNeedsUpdate = true;
+  }
+
   /** Cajas [min, max] de todas las piezas que no están seleccionadas (para el imán). */
   #otherBoxes() {
-    const sel = this.editor.selection;
+    const sel = new Set([...this.editor.selection, ...this.editor.mirrorFollowers]);
     const out = [];
     for (const [k, v] of this.editor.model.voxels) {
       if (sel.has(k)) continue;
@@ -634,6 +733,9 @@ export class SelectionGizmo extends EventTarget {
   #end() {
     this.dragging = false;
     this.preview.clear();
+    this.mirrorPreview.clear();
+    this.selfPreview.clear();
+    this.P0inv = null;
     this.editor.transforming = false;
 
     if (this.target === 'sticker') {

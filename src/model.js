@@ -45,7 +45,7 @@ export const PIECES = {
   wedge: 'Triángulo',
 };
 const NUM = '\\d+(\\.\\d+)?';
-const VOXEL = new RegExp(`^#[0-9a-f]{6}([0-9a-f]{2})?\\*?(\\/(cube|sphere|cylinder|cone|pyramid|wedge|compound:[-0-9.,;]+)\\/[0-5](\\/[0-3](\\/${NUM},${NUM},${NUM}(\\/${NUM},${NUM},${NUM})?)?)?)?(\\|g\\d+)?$`);
+const VOXEL = new RegExp(`^#[0-9a-f]{6}([0-9a-f]{2})?\\*?(\\/(cube|sphere|cylinder|cone|pyramid|wedge|compound:[-0-9.,;]+|deform:[-0-9.,]+)\\/[0-5](\\/[0-3](\\/${NUM},${NUM},${NUM}(\\/${NUM},${NUM},${NUM})?)?)?)?(\\|g\\d+)?$`);
 const UP_FACE = 2;
 const UNIT = [1, 1, 1];
 const ZERO = [0, 0, 0];
@@ -103,6 +103,32 @@ export function makeVoxel(color, shape = 'cube', f = UP_FACE, t = 0, size = UNIT
 // Pieza compuesta (fusión de cubos de un color): su "forma" lleva las cajas que la componen,
 // "compound:x,y,z,w,h,d;x,y,z,w,h,d…", relativas a su esquina mínima.
 export const isCompound = (p) => p.shape.startsWith('compound:');
+
+// Pieza deformada (cubo con caras achicadas, agrandadas o recorridas): su "forma" lleva cuánto
+// se corre cada una de sus 8 esquinas, en fracciones de su tamaño: "deform:dx,dy,dz,…" (24 números).
+// Esquina i: bit 1 = lado +x, bit 2 = +y, bit 4 = +z.
+export const isDeformed = (p) => p.shape.startsWith('deform:');
+
+/** Corrimiento de las 8 esquinas (24 números, en fracciones del tamaño); ceros si no está deformada. */
+export function deformOffsets(shape) {
+  if (!shape.startsWith('deform:')) return new Array(24).fill(0);
+  const v = shape.slice(7).split(',').map(Number);
+  return v.length === 24 && v.every(Number.isFinite) ? v : new Array(24).fill(0);
+}
+
+/** Forma a partir de los corrimientos: 'cube' si ya no hay deformación. */
+export function makeDeformShape(off) {
+  const r = off.map((v) => Math.round(v * 1000) / 1000);
+  return r.every((v) => Math.abs(v) < 1e-6) ? 'cube' : `deform:${r.map((v) => (Object.is(v, -0) ? 0 : v)).join(',')}`;
+}
+
+/** Esquinas de la pieza en el mundo (deformadas si lo está): 8 × [x, y, z]. */
+export function pieceCorners(cell, p) {
+  const off = deformOffsets(p.shape);
+  const min = cell.map((c, i) => c + p.offset[i]);
+  return Array.from({ length: 8 }, (_, i) => [0, 1, 2].map((a) =>
+    min[a] + ((i >> a) & 1) * p.size[a] + off[i * 3 + a] * p.size[a]));
+}
 export const compoundBoxes = (shape) => shape.slice(9).split(';').map((b) => b.split(',').map(Number));
 export const makeCompoundShape = (boxes) => `compound:${boxes.map((b) => b.map(snapStep).join(',')).join(';')}`;
 

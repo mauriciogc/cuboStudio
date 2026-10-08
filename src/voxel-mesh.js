@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {
   parseKey, parseVoxel, keyOf, isUnit, isZero, FACE_NORMALS, NEIGHBORS, PIECES,
-  isCompound, pieceWorldBoxes,
+  isCompound, pieceWorldBoxes, isDeformed, deformOffsets, pieceCorners,
 } from './model.js';
 import { compoundGeometry } from './compound.js';
 
@@ -116,11 +116,12 @@ export function setBevel(id) {
   const r = (BEVELS[id] ?? BEVELS.soft).r;
   if (r === bevel) return false;
   bevel = r;
-  const old = [PIECE_GEOMETRIES.cube, LIGHT_CUBE, ...sizedCubes.values(), ...compounds.values()];
+  const old = [PIECE_GEOMETRIES.cube, LIGHT_CUBE, ...sizedCubes.values(), ...compounds.values(), ...deformedCache.values()];
   PIECE_GEOMETRIES.cube = roundedBox(1, 1, 1, r > 0.1 ? 3 : 2, r);
   LIGHT_CUBE = roundedBox(1, 1, 1, 1, r);
   sizedCubes.clear();
   compounds.clear();
+  deformedCache.clear();
   // Las mallas viejas se sueltan en el siguiente cuadro (ya redibujadas con las nuevas)
   requestAnimationFrame(() => old.forEach((g) => g.dispose()));
   return true;
@@ -196,13 +197,44 @@ export function glowLightParams(count, strength = 1) {
   return { intensity: 4 * strength * (1 + 0.5 * Math.sqrt(count - 1)), distance: 7 + 2 * Math.sqrt(count) };
 }
 
+// Piezas deformadas: la caja (con sus orillas) se deforma esquina por esquina (interpolación
+// trilineal); las caras siguen planas. Centrada en el centro de su caja sin deformar.
+const deformedCache = new Map();
+function deformedGeometryFor(p) {
+  const key = `${p.shape}|${p.size.join(',')}|${bevel}`;
+  let g = deformedCache.get(key);
+  if (g) return g;
+  const [sx, sy, sz] = p.size;
+  const off = deformOffsets(p.shape);
+  const base = roundedBox(sx, sy, sz, 2, Math.min(bevel, sx / 2, sy / 2, sz / 2));
+  g = base.index ? base.toNonIndexed() : base;
+  if (g !== base) base.dispose();
+  const pos = g.getAttribute('position');
+  for (let i = 0; i < pos.count; i++) {
+    const v = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+    const t = v.map((c, a) => Math.min(1, Math.max(0, c / p.size[a] + 0.5)));
+    const d = [0, 0, 0];
+    for (let c = 0; c < 8; c++) {
+      const w = [0, 1, 2].reduce((acc, a) => acc * ((c >> a) & 1 ? t[a] : 1 - t[a]), 1);
+      for (let a = 0; a < 3; a++) d[a] += w * off[c * 3 + a] * p.size[a];
+    }
+    pos.setXYZ(i, v[0] + d[0], v[1] + d[1], v[2] + d[2]);
+  }
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  g.computeBoundingBox();
+  deformedCache.set(key, g);
+  return g;
+}
+
 const isSizedCube = (p) => p.shape === 'cube' && (!isUnit(p.size) || !isZero(p.offset));
 /** Piezas que se dibujan una por una con geometría propia (no instanciadas). */
-const ownMesh = (p) => isSizedCube(p) || isCompound(p);
+const ownMesh = (p) => isSizedCube(p) || isCompound(p) || isDeformed(p);
 
-/** Geometría para dibujar una pieza (los cubos estirados y las compuestas tienen la suya). */
+/** Geometría para dibujar una pieza (los cubos estirados, compuestas y deformadas tienen la suya). */
 export function pieceGeometry(p) {
   if (isCompound(p)) return compoundGeometryFor(p);
+  if (isDeformed(p)) return deformedGeometryFor(p);
   return isSizedCube(p) ? sizedCubeGeometry(p.size) : (PIECE_GEOMETRIES[p.shape] ?? PIECE_GEOMETRIES.cube);
 }
 
@@ -302,6 +334,12 @@ export class VoxelMesh {
     const E = 0.004; // un pelito afuera de la cara, para que no se pierda contra ella
     const v = new THREE.Vector3();
     for (const [c, p] of pieces) {
+      if (isDeformed(p)) {
+        // Deformada: las 12 aristas entre sus esquinas reales
+        const P = pieceCorners(c, p);
+        for (const [a, b] of BOX_EDGES) out.push(...P[a], ...P[b]);
+        continue;
+      }
       if (p.shape === 'cube' || isCompound(p)) {
         if (isCompound(p)) {
           const pos = compoundEdgesFor(p);

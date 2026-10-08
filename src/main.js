@@ -8,6 +8,7 @@ import { ReferenceLayer, REF_SLOTS, prepareImage } from './references.js';
 import { WorkPlane, PLANE_AXES } from './workplane.js';
 import { SelectionGizmo } from './gizmo.js';
 import { SunGizmo } from './sun-gizmo.js';
+import { DeformTool } from './deform-tool.js';
 import { BEVELS, setBevel } from './voxel-mesh.js';
 import {
   renderModelImage, renderStandalone, renderFormatImage, IMAGE_FORMATS, exportGLB, download, dataURLToBlob, slugify, ISO_DIRECTION,
@@ -38,6 +39,8 @@ editor.workplane = workplane;
 const gizmo = new SelectionGizmo(stage, editor);
 // Sol arrastrable (herramienta U): orienta la luz de la figura
 const sunGizmo = new SunGizmo(stage, editor);
+// Deformar caras de cubos y bloques (modo de la píldora)
+new DeformTool(stage, editor, gizmo);
 gizmo.addEventListener('blocked', () => toast('No cabe ahí: choca con otra pieza o sale de la cuadrícula'));
 gizmo.addEventListener('size', (e) => {
   $('#stat-hover').textContent = e.detail ? `Tamaño ${e.detail.map((v) => +v.toFixed(2)).join(' × ')}` : '';
@@ -119,7 +122,7 @@ function placeSelectBar() {
 }
 placeSelectBar();
 const prefs = store.prefs();
-gizmo.setMode(['none', 'translate', 'rotate', 'scale'].includes(prefs.gizmoMode) ? prefs.gizmoMode : 'none');
+gizmo.setMode(['none', 'translate', 'rotate', 'scale', 'deform', 'extrude'].includes(prefs.gizmoMode) ? prefs.gizmoMode : 'none');
 
 const current = { id: null, name: '' };
 const nameInput = $('#model-name');
@@ -329,7 +332,20 @@ function syncSelectBar() {
     : n === 1 ? 'Caras: crece hacia ese lado. Esquinas amarillas: crece parejo en diagonal. Pasos de 0.1.' : 'Selecciona una sola pieza para escalarla.';
   tooltips.refresh(scaleBtn);
   if (!sticker && n > 1 && gizmo.mode === 'scale') gizmo.setMode('translate');
+  // Deformar: un cubo o bloque a la vez
+  const target = sticker ? null : editor.deformTarget;
+  for (const mode of ['deform', 'extrude']) {
+    const btn = $(`#gizmo-mode [data-mode="${mode}"]`);
+    btn.hidden = !!sticker;
+    btn.disabled = !target;
+  }
+  if (!target && ['deform', 'extrude'].includes(gizmo.mode)) gizmo.setMode('translate');
+  $('#sel-straighten').hidden = !target || target.p.shape === 'cube';
 }
+
+$('#sel-straighten').addEventListener('click', () => {
+  if (editor.setSelectedShape('cube')) toast('La pieza volvió a ser una caja');
+});
 
 $('#sel-delete').addEventListener('click', () => (editor.selected ? editor.deleteSelected() : editor.deleteSelection()));
 editor.addEventListener('notice', (e) => toast(e.detail));
@@ -341,6 +357,7 @@ editor.addEventListener('color', syncColor);
 editor.addEventListener('load', syncModel);
 editor.addEventListener('change', () => {
   syncModel();
+  if (editor.selection.size || editor.selected) syncSelectBar(); // p. ej. Enderezar tras deformar
   scheduleSave();
   $('#hint').style.opacity = editor.model.count > 3 ? '0' : '1';
 });

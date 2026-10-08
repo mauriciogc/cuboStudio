@@ -2,10 +2,10 @@ import * as THREE from 'three';
 import {
   VoxelModel, keyOf, parseKey, FACE_NORMALS, faceIndex, stickerKey, parseStickerKey,
   PIECES, ROTATABLE, parseVoxel, makeVoxel, isUnit, isZero, pieceCells, MIN_PIECE, withAlpha, snapStep,
-  isCompound, pieceWorldBoxes, makeCompoundShape,
+  isCompound, pieceWorldBoxes, makeCompoundShape, isDeformed, deformOffsets, makeDeformShape, pieceCorners,
 } from './model.js';
 import {
-  VoxelMesh, PIECE_GEOMETRIES, pieceQuaternion, pieceAxes, orientationFrom,
+  VoxelMesh, PIECE_GEOMETRIES, pieceQuaternion, pieceAxes, orientationFrom, pieceGeometry, pieceTransform,
 } from './voxel-mesh.js';
 import {
   StickerLayer, createStickerMesh, placeStickerMesh, stickerAxes,
@@ -435,7 +435,22 @@ export class Editor extends EventTarget {
     const lin = (d) => point(center.map((c, i) => c + d[i])).map((c, i) => c - mc[i]);
     // Tamaño: se permuta con el giro (pasos de 0.1)
     const size = lin(p.size).map((v) => snapStep(Math.abs(v)));
-    if (p.shape !== 'cube') {
+    if (isDeformed(p)) {
+      // Deformada: cada esquina (de la caja y la deformada) se transforma y se reacomoda
+      const min0 = cell0.map((c, i) => c + p.offset[i]);
+      const off = deformOffsets(p.shape);
+      const newMin = mc.map((c, i) => c - size[i] / 2);
+      const next = new Array(24).fill(0);
+      for (let i = 0; i < 8; i++) {
+        const box = [0, 1, 2].map((a) => min0[a] + ((i >> a) & 1) * p.size[a]);
+        const real = box.map((v, a) => v + off[i * 3 + a] * p.size[a]);
+        const nb = point(box);
+        const nr = point(real);
+        const j = [0, 1, 2].reduce((acc, a) => acc | ((nb[a] - newMin[a] > size[a] / 2 ? 1 : 0) << a), 0);
+        for (let a = 0; a < 3; a++) next[j * 3 + a] = size[a] ? (nr[a] - nb[a]) / size[a] : 0;
+      }
+      p.shape = makeDeformShape(next);
+    } else if (p.shape !== 'cube') {
       const round = (v) => lin(v).map(Math.round);
       const { up, back } = pieceAxes(p.f, p.t);
       Object.assign(p, orientationFrom(round(up), round(back)));
@@ -1098,9 +1113,23 @@ export class Editor extends EventTarget {
     this.stage.helpers.push(this.ghostGroup);
   }
 
-  /** Cajas translúcidas sobre varias piezas (selección o grupo bajo el puntero). */
-  #showBoxes(name, keys, color, opacity) {
-    const n = keys.length;
+  /**
+   * Resaltado translúcido de varias piezas (selección, pareja o grupo bajo el puntero).
+   * Los cubos y bloques llevan una caja; las demás formas (esferas, conos, fusionadas,
+   * deformadas…) se resaltan con su forma real, un poco más grande.
+   */
+  #showBoxes(name, keys, color, opacity, visible = true) {
+    const boxy = [];
+    const shaped = [];
+    for (const k of keys) {
+      const v = this.model.voxels.get(k);
+      if (!v) continue;
+      const p = parseVoxel(v);
+      // Con miles de piezas, todas con caja (es lo rápido)
+      if (p.shape === 'cube' || keys.length > 2000) boxy.push([k, p]);
+      else shaped.push([k, p]);
+    }
+    const n = boxy.length;
     let mesh = this[name];
     if (!mesh || mesh.instanceMatrix.count < n) {
       if (mesh) { this.ghostGroup.remove(mesh); mesh.dispose(); }
@@ -1117,25 +1146,49 @@ export class Editor extends EventTarget {
       this[name] = mesh;
     }
     const m = new THREE.Matrix4();
-    keys.forEach((k, i) => {
+    boxy.forEach(([k, p], i) => {
       const c = parseKey(k);
-      const { size, offset } = parseVoxel(this.model.voxels.get(k) ?? '#000000');
       // Margen fijo de 0.05 por lado (no proporcional: en piezas grandes no se infla)
-      m.makeScale(...size.map((s) => s + 0.1)).setPosition(...c.map((v, j) => v + offset[j] + size[j] / 2));
+      m.makeScale(...p.size.map((s) => s + 0.1)).setPosition(...c.map((v, j) => v + p.offset[j] + p.size[j] / 2));
       mesh.setMatrixAt(i, m);
     });
     mesh.count = n;
     mesh.instanceMatrix.needsUpdate = true;
+    mesh.visible = visible;
+
+    // Formas: su geometría real (se rehace sólo si cambian las piezas)
+    let group = this[`${name}Shapes`];
+    if (!group) {
+      group = new THREE.Group();
+      group.userData.mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+      this.ghostGroup.add(group);
+      this[`${name}Shapes`] = group;
+    }
+    const sig = `${this.version}|${shaped.map(([k]) => k).join(' ')}`;
+    if (group.userData.sig !== sig) {
+      group.userData.sig = sig;
+      group.clear();
+      for (const [k, p] of shaped) {
+        const shapeMesh = new THREE.Mesh(pieceGeometry(p), group.userData.mat);
+        shapeMesh.matrixAutoUpdate = false;
+        pieceTransform(parseKey(k), p, shapeMesh.matrix);
+        const grow = 1 + Math.min(0.3, 0.1 / Math.max(0.2, Math.min(...p.size)));
+        shapeMesh.matrix.multiply(m.makeScale(grow, grow, grow));
+        shapeMesh.renderOrder = 3;
+        group.add(shapeMesh);
+      }
+    }
+    group.visible = visible;
     return mesh;
   }
 
   #showSelection() {
     const { followers } = this.#mirrorSplit();
     const lead = followers.size ? [...this.selection].filter((k) => !followers.has(k)) : [...this.selection];
-    this.#showBoxes('selMesh', lead, '#4fa3e0', 0.3).visible = !this.transforming;
+    this.#showBoxes('selMesh', lead, '#4fa3e0', 0.3, !this.transforming);
     // La pareja reflejada (con espejo) en un azul más claro
     if (followers.size || this.pairMesh) {
-      this.#showBoxes('pairMesh', [...followers], '#9fd0f2', 0.22).visible = !this.transforming && followers.size > 0;
+      this.#showBoxes('pairMesh', [...followers], '#9fd0f2', 0.22, !this.transforming && followers.size > 0);
     }
   }
 
@@ -1168,6 +1221,7 @@ export class Editor extends EventTarget {
   #refreshGhost() {
     this.ghosts.forEach((g) => { g.visible = false; });
     if (this.hoverMesh) this.hoverMesh.count = 0;
+    if (this.hoverMeshShapes) this.hoverMeshShapes.visible = false;
     this.frames.forEach((fr) => { fr.visible = false; });
     this.stickerGhosts.clear();
     if (this.selected && !this.transforming) {
@@ -1218,9 +1272,13 @@ export class Editor extends EventTarget {
           this.#emit('hover', { label: `Grupo: ${keys.length} piezas · clic lo selecciona · ⌘/Ctrl+clic sólo esta` });
           return;
         }
-        this.#showGhost(0, c, c, '#ffffff', 0.3);
-        this.ghosts[0].scale.set(...size.map((v) => v + 0.06));
-        this.ghosts[0].position.set(...c.map((v, j) => v + offset[j] + size[j] / 2));
+        if (parseVoxel(value).shape !== 'cube') {
+          this.#showBoxes('hoverMesh', [hit.key ?? keyOf(...c)], '#ffffff', 0.35); // con su forma real
+        } else {
+          this.#showGhost(0, c, c, '#ffffff', 0.3);
+          this.ghosts[0].scale.set(...size.map((v) => v + 0.06));
+          this.ghosts[0].position.set(...c.map((v, j) => v + offset[j] + size[j] / 2));
+        }
         this.#emit('hover', { cell: c, label: group ? 'sólo esta pieza del grupo' : 'clic selecciona · Shift+clic suma' });
       } else {
         this.#emit('hover', hit.voxel ? { cell: hit.voxel } : null);
@@ -1729,6 +1787,120 @@ export class Editor extends EventTarget {
   /** Mueve las piezas seleccionadas; falla si chocan con otras o salen de la cuadrícula. */
   moveSelection(dx, dy, dz) {
     return this.transformSelection((c) => [c[0] + dx, c[1] + dy, c[2] + dz]);
+  }
+
+  // ---------- deformar ----------
+
+  /** La única pieza seleccionada, si es un cubo o bloque (se puede deformar). */
+  get deformTarget() {
+    if (this.selection.size !== 1) return null;
+    const [key] = this.selection;
+    const v = this.model.voxels.get(key);
+    if (!v) return null;
+    const p = parseVoxel(v);
+    return p.shape === 'cube' || isDeformed(p) ? { key, cell: parseKey(key), p } : null;
+  }
+
+  /**
+   * Cambia la forma de la pieza seleccionada (deformarla o enderezarla). Con espejo, su pareja
+   * queda deformada en reflejo. live: mientras se arrastra (un solo paso de deshacer al soltar).
+   */
+  setSelectedShape(shape, { live = false } = {}) {
+    const t = this.deformTarget;
+    if (!t) return false;
+    const { key, cell, p } = t;
+    const v = makeVoxel(p.fill, shape, p.f, p.t, p.size, p.offset, p.group);
+    const changes = new Map([[key, v]]);
+    for (const fk of this.#mirrorSplit().followers) {
+      const res = this.#movedValue(cell, v, MIRROR_X);
+      if (!res) continue;
+      const fp = parseVoxel(this.model.voxels.get(fk));
+      const mp = parseVoxel(res[1]);
+      changes.set(fk, makeVoxel(fp.fill, mp.shape, mp.f, mp.t, mp.size, mp.offset, fp.group));
+    }
+    if (live && !this.stroke) this.stroke = [];
+    this.apply(changes);
+    if (!live && this.stroke) {
+      const diff = this.stroke;
+      this.stroke = null;
+      if (diff.length) {
+        this.#pushUndo(diff);
+        this.#emit('change');
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Pieza que sale de la cara (axis, sign) de la pieza seleccionada, de largo `length`:
+   * arranca con la forma exacta de esa cara (aunque esté achicada o inclinada) y sigue recta.
+   * Devuelve [celda, valor] o null si no cabe en la cuadrícula.
+   */
+  extrudePreview(axis, sign, length) {
+    const t = this.deformTarget;
+    if (!t || length < MIN_PIECE - 1e-6) return null;
+    return this.#extrudeValue(t.cell, t.p, axis, sign, length);
+  }
+
+  #extrudeValue(cell, p, axis, sign, length) {
+    const P = pieceCorners(cell, p);
+    const face = [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => ((i >> axis) & 1) === (sign > 0 ? 1 : 0));
+    // Esquinas de la pieza nueva: la cara (base) y la cara corrida `length` hacia afuera (punta)
+    const real = new Array(8);
+    for (const i of face) {
+      const top = [...P[i]];
+      top[axis] += sign * length;
+      const baseBit = sign > 0 ? 0 : 1; // la base queda del lado de la pieza original
+      const j0 = (i & ~(1 << axis)) | (baseBit << axis);
+      const j1 = (i & ~(1 << axis)) | ((1 - baseBit) << axis);
+      real[j0] = P[i].map(snapStep);
+      real[j1] = top.map(snapStep);
+    }
+    const min = [0, 1, 2].map((a) => snapStep(Math.min(...real.map((c) => c[a]))));
+    const max = [0, 1, 2].map((a) => snapStep(Math.max(...real.map((c) => c[a]))));
+    const size = max.map((v, a) => snapStep(v - min[a]));
+    if (size.some((v) => v < MIN_PIECE - 1e-6)) return null;
+    const off = new Array(24).fill(0);
+    for (let j = 0; j < 8; j++) {
+      for (let a = 0; a < 3; a++) {
+        const box = min[a] + ((j >> a) & 1) * size[a];
+        off[j * 3 + a] = (real[j][a] - box) / size[a];
+      }
+    }
+    const nCell = min.map((v) => Math.floor(v + 1e-6));
+    const offset = min.map((v, a) => snapStep(v - nCell[a]));
+    if (!pieceCells(nCell, size, offset).every((c) => this.model.inBounds(...c))) return null;
+    return [nCell, makeVoxel(p.fill, makeDeformShape(off), 2, 0, size, offset, p.group)];
+  }
+
+  /**
+   * Extruye: crea la pieza que sale de esa cara (aparte, del mismo color y grupo) y la deja
+   * seleccionada para seguir. Con espejo, también la pareja. Devuelve la clave nueva o null.
+   */
+  extrudeSelected(axis, sign, length) {
+    const t = this.deformTarget;
+    if (!t) return null;
+    const res = this.#extrudeValue(t.cell, t.p, axis, sign, length);
+    if (!res) return null;
+    const [cell, v] = res;
+    const changes = new Map();
+    const taken = new Set();
+    const key = this.model.freeKey(cell, taken);
+    taken.add(key);
+    changes.set(key, v);
+    for (const fk of this.#mirrorSplit().followers) {
+      const m = this.#movedValue(cell, v, MIRROR_X);
+      if (!m) continue;
+      const fp = parseVoxel(this.model.voxels.get(fk));
+      const mp = parseVoxel(m[1]);
+      const mk = this.model.freeKey(m[0], taken);
+      taken.add(mk);
+      changes.set(mk, makeVoxel(mp.fill, mp.shape, mp.f, mp.t, mp.size, mp.offset, fp.group));
+    }
+    this.selection = new Set([key]);
+    this.apply(changes);
+    this.#emit('selection');
+    return key;
   }
 
   /** Tamaño de la única pieza seleccionada, o null. */

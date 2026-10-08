@@ -68,11 +68,21 @@ El panel de la derecha muestra sólo lo que sirve para lo que estás haciendo:
   - **Mover:** flechas X/Y/Z en pasos de 0.1.
   - **Girar:** aros de 90°.
   - **Escalar:** manijas en las 6 caras (crece hacia ese lado) y en las 8 esquinas amarillas (crece parejo).
+  - **Deformar** (cubos y bloques): eliges una cara con los cuadritos blancos; sus **4 orillas** la achican o
+    agrandan de ese lado (rampas, techos, pirámides, embudos) y el **centro** la recorre para inclinarla.
+    Con imán al tamaño original, al lado recto, a la mitad, al filo (ancho 0), a 45° y al centro.
+    El único tope es la orilla de la cuadrícula.
+    **Enderezar** la regresa a caja. La deformación se conserva al mover, girar, escalar y copiar.
+  - **Extruir** (cubos y bloques): jala directo el **cuadrito morado** de cualquier cara, como al escalar, y sale
+    una **pieza nueva** del tamaño y forma de esa cara (aparte, del mismo color y grupo), con imán en largos
+    enteros y al tocar otra pieza. Queda seleccionada para seguir extruyendo tramo por tramo.
   - **Agrupar / Desagrupar, Fusionar / Separar, Duplicar, Copiar y Eliminar.**
 - **Imanes al arrastrar:** al escalar, el tamaño se pega en los enteros (1, 2, 3…); al mover, en las
   posiciones de la cuadrícula. En los dos casos también se pega cuando la pieza toca a otra. Si sigues
   arrastrando, se suelta y continúa.
 - **Topes:** el tamaño máximo de una pieza es el de la cuadrícula, y al mover o escalar se frena en la orilla.
+- **Resaltes con la forma real:** al seleccionar o pasar el mouse, esferas, conos, piezas fusionadas y deformadas
+  se resaltan con su forma, no con una caja.
 - **Copiar / pegar / duplicar** (Ctrl+C / V / D), también entre figuras.
 - **Grupos** (Ctrl+G / Ctrl+Shift+G): un clic en cualquier pieza selecciona el grupo completo; al pasar el
   mouse se resalta todo el grupo.
@@ -172,7 +182,8 @@ Cada entrada de la paleta describe una pieza:
 ```
 
 - `aa`: opacidad; `*`: la pieza brilla.
-- `forma`: `cube`, `sphere`, `cylinder`, `cone`, `pyramid`, `wedge` o `compound:x,y,z,w,h,d;…` (piezas fusionadas).
+- `forma`: `cube`, `sphere`, `cylinder`, `cone`, `pyramid`, `wedge`, `compound:x,y,z,w,h,d;…` (piezas fusionadas)
+  o `deform:dx,dy,dz,…` (cubo deformado: cuánto se corre cada una de sus 8 esquinas, en fracciones de su tamaño).
 - `ancho,alto,fondo` / `dx,dy,dz`: tamaño y desplazamiento dentro de la casilla (pasos de 0.1).
 - `|gN`: grupo.
 
@@ -206,6 +217,7 @@ Cada ejemplo se descarga sólo cuando hace falta.
 | `src/editor.js` | Herramientas, raycast, vista previa, selección, grupos, fusionar, copiar/pegar e historial |
 | `src/gizmo.js` | Gizmo de mover/girar, manijas de escalar e imanes |
 | `src/sun-gizmo.js` | Sol arrastrable para orientar la luz |
+| `src/deform-tool.js` | Deformar y Extruir caras de cubos y bloques (manijas e imanes) |
 | `src/stage.js` | Renderer, cámara, luces, piso, fondos y vistas |
 | `src/exporter.js` | PNG (pantalla o recortado), GLB y miniaturas |
 | `src/stickers.js` | Calcomanías: diseños en canvas, texturas y colocación por cara |

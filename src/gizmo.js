@@ -21,7 +21,7 @@ function material(color) {
  * otra) y entre dos metas avanza de forma continua. Devuelve { value, snapped }.
  */
 const STICK = 0.2; // ancho de la zona donde se queda pegado
-function magnet(v, targets) {
+export function magnet(v, targets) {
   let a = -Infinity;
   let b = Infinity;
   for (const t of targets) {
@@ -134,7 +134,7 @@ export class SelectionGizmo extends EventTarget {
 
   setMode(mode) {
     this.mode = mode;
-    if (mode !== 'none') this.controls.setMode(mode);
+    if (['translate', 'rotate', 'scale'].includes(mode)) this.controls.setMode(mode);
     this.sync();
     this.dispatchEvent(new Event('mode'));
   }
@@ -145,8 +145,8 @@ export class SelectionGizmo extends EventTarget {
     const { selection, tool, selected } = this.editor;
     const tc = this.controls;
 
-    // Sólo seleccionar: sin flechas, aros ni manijas
-    if (this.mode === 'none') {
+    // Sólo seleccionar (o Deformar, que tiene sus propias manijas): sin flechas, aros ni manijas
+    if (this.mode === 'none' || this.mode === 'deform' || this.mode === 'extrude') {
       this.#hideHandles();
       tc.detach();
       return;

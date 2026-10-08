@@ -16,8 +16,9 @@ Cada push a `main` se publica solo en GitHub Pages (`.github/workflows/deploy.ym
 
 ## Primeros pasos
 
-- La primera vez se abre una figura vacía con la ventana de **Ejemplos**: abre uno para ver cómo se hace
-  (se crea una copia para editar) o cierra para empezar en blanco.
+- La primera vez (y cuando ya no tienes figuras) aparece la **bienvenida**: un **recorrido** por la pantalla con
+  globitos paso a paso, la **guía** con imágenes y los **ejemplos** (al abrir uno se crea una copia para editar).
+- El botón **?** reúne la guía, el recorrido y los atajos de teclado.
 - Con la figura vacía aparece un aviso con el botón **Ver ejemplos**.
 - Haz clic en el piso con **Construir (B)** para poner tu primer cubo.
 
@@ -227,6 +228,7 @@ Cada ejemplo se descarga sólo cuando hace falta.
 | `src/examples.js` | Carga de ejemplos desde `public/ejemplos/` |
 | `src/tooltip.js` | Tooltips con nombre, atajo y descripción |
 | `src/icons.js` / `src/palette.js` | Íconos de la interfaz y paleta de colores |
+| `src/tour.js` | Recorrido por la pantalla (globitos paso a paso) |
 | `src/main.js` | Interfaz: paneles, píldora de selección, galería, modales, atajos y autoguardado |
 | `public/guia/` | Guía para usuarios (página con capturas y animaciones de la app) |
 

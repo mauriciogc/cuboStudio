@@ -9,6 +9,7 @@ import { WorkPlane, PLANE_AXES } from './workplane.js';
 import { SelectionGizmo } from './gizmo.js';
 import { SunGizmo } from './sun-gizmo.js';
 import { DeformTool } from './deform-tool.js';
+import { startTour } from './tour.js';
 import { BEVELS, setBevel } from './voxel-mesh.js';
 import {
   renderModelImage, renderStandalone, renderFormatImage, IMAGE_FORMATS, exportGLB, download, dataURLToBlob, slugify, ISO_DIRECTION,
@@ -150,6 +151,11 @@ function saveNow() {
   clearTimeout(saveTimer);
   saveTimer = null;
   if (!current.id) return false;
+  // Una figura nueva no se guarda hasta que tenga al menos una pieza (sin "Figura 1" vacías)
+  if (!editor.model.count && !store.entry(current.id)) {
+    saveStatus.textContent = '';
+    return false;
+  }
   try {
     store.save({ id: current.id, name: current.name, data: { ...editor.model.serialize(), bevel: prefs.bevel ?? 'soft', light: stage.lighting, background: stage.backgroundName }, thumb: makeThumb() });
     store.currentId = current.id;
@@ -777,7 +783,12 @@ $('#gallery').addEventListener('click', async (e) => {
       clearTimeout(saveTimer);
       saveTimer = null;
       const next = store.list()[0];
-      if (!next || !openModel(next.id)) createModel(nextUntitled());
+      if (!next || !openModel(next.id)) {
+        // Ya no queda ninguna figura: empezar en blanco con la bienvenida (guía, recorrido y ejemplos)
+        createModel('Figura 1');
+        openWelcome();
+        return;
+      }
     }
     renderGallery();
   } else {
@@ -841,18 +852,25 @@ $('#examples').addEventListener('keydown', (e) => {
 });
 
 /** Galería con dos pestañas separadas: Mis figuras y Ejemplos. */
+let welcomeMode = false; // la ventana se abrió como bienvenida
+
 function showGalleryTab(tab) {
   const examples = tab === 'examples';
+  // La bienvenida va en Mis figuras; Ejemplos muestra sólo los ejemplos
+  $('#welcome-banner').hidden = !(welcomeMode && !examples);
   if (examples) renderExamples();
   else renderGallery();
   $('#gallery').hidden = examples;
   $('#examples').hidden = !examples;
-  $('#btn-new').hidden = examples;
+  // En la bienvenida ya hay una figura en blanco: "Nueva vacía" sobra (y competiría con el recorrido)
+  $('#btn-new').hidden = examples || welcomeMode;
   document.querySelectorAll('#gallery-tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-  if (examples) $('#gallery-note').textContent = 'Al abrir uno se crea una copia para editar';
+  $('#examples-hint').hidden = !examples;
+  if (examples) $('#gallery-note').textContent = '';
 }
 
-function openGallery(tab = 'mine') {
+function openGallery(tab = 'mine', { welcome = false } = {}) {
+  welcomeMode = welcome;
   $('#gallery-dialog').showModal();
   showGalleryTab(tab);
 }
@@ -863,6 +881,47 @@ $('#gallery-tabs').addEventListener('click', (e) => {
 });
 $('#btn-gallery').addEventListener('click', () => openGallery('mine'));
 $('#empty-examples').addEventListener('click', () => openGallery('examples'));
+$('#welcome-examples').addEventListener('click', () => showGalleryTab('examples'));
+
+/** Bienvenida: ejemplos, con la guía y el recorrido a la vista (primera vez o sin figuras). */
+function openWelcome() {
+  // Sin figuras con piezas: Mis figuras con la bienvenida; si ya tiene, directo a los ejemplos
+  const hasFigures = store.list().some((e) => e.count > 0);
+  openGallery(hasFigures ? 'examples' : 'mine', { welcome: !hasFigures });
+}
+
+// ---------- recorrido ----------
+const TOUR_STEPS = [
+  { title: '¡Hola!', text: 'Este recorrido te enseña lo básico de CuboStudio en unos pasos. Puedes saltarlo cuando quieras.' },
+  { target: '.toolbar', title: 'Herramientas', html: 'Aquí eliges qué hacer: construir, borrar, pintar, seleccionar… La letra chiquita es su atajo de teclado.' },
+  { target: '[data-tool="build"]', title: 'Construir', html: 'Con <b>Construir</b> <kbd>B</kbd> haz clic en el piso para poner un cubo, y sobre una de sus caras para pegar otro. <kbd>Shift</kbd> + clic borra.', before: () => editor.setTool('build') },
+  { target: '#color-section', title: 'Colores', text: 'Elige el color de tus piezas. Aquí también ajustas la opacidad (agua, vidrio) y si la pieza brilla.', before: () => editor.setTool('build') },
+  { target: '#piece-section', title: 'Formas', text: 'Además de cubos puedes poner esferas, cilindros, conos, pirámides y cuñas.', before: () => editor.setTool('build') },
+  {
+    target: '#scene-section', title: 'Escena',
+    html: 'Lo de toda la figura: el tamaño de la <b>cuadrícula</b>, el <b>fondo</b>, la <b>luz</b> (día, atardecer, noche…) y las <b>orillas</b> de los cubos. Aparece cuando no estás construyendo ni tienes piezas seleccionadas.',
+    before: () => { editor.setTool('select'); editor.clearSelection(); editor.select(null); },
+  },
+  { target: '.views', title: 'La cámara', html: 'Arrastra sobre el piso para girar, usa la rueda para acercarte y el clic derecho para desplazarte. Estos botones te dan las vistas de frente, lado y arriba (<kbd>1</kbd>–<kbd>5</kbd>).' },
+  { target: '[data-tool="select"]', title: 'Seleccionar', html: 'Con <b>Seleccionar</b> <kbd>A</kbd> eliges piezas. Aparece una barrita para moverlas, girarlas, escalarlas, deformarlas, agruparlas o fusionarlas.' },
+  { target: '#btn-gallery', title: 'Tus figuras', text: 'Todo se guarda solo. Aquí están tus figuras y los ejemplos listos para abrir.' },
+  { target: '#btn-export', title: 'Exportar', text: 'Descarga tu figura como imagen (también en formatos para Instagram, historias o fondo de celular) o como modelo 3D.' },
+  { target: '#btn-help', title: '¿Dudas?', text: 'Aquí están los atajos, la guía completa con imágenes y este recorrido, cuando lo necesites.', done: '¡A construir!', before: () => editor.setTool('build') },
+];
+function runTour() {
+  document.querySelectorAll('dialog[open]').forEach((d) => d.close());
+  editor.clearSelection();
+  editor.select(null);
+  startTour(TOUR_STEPS, {
+    onEnd: () => {
+      prefs.tourDone = true;
+      store.savePrefs(prefs);
+      editor.setTool('build');
+    },
+  });
+}
+$('#welcome-tour').addEventListener('click', runTour);
+$('#help-tour').addEventListener('click', runTour);
 
 // Figura vacía: un aviso con acceso a los ejemplos
 function syncEmptyHint() {
@@ -1033,7 +1092,12 @@ window.addEventListener('keydown', (e) => {
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
 
-  if (mod && key === 's') { e.preventDefault(); if (saveNow()) toast('Guardado'); return; }
+  if (mod && key === 's') {
+    e.preventDefault();
+    if (saveNow()) toast('Guardado');
+    else if (!editor.model.count) toast('Agrega al menos una pieza para guardar la figura');
+    return;
+  }
   if (typing || document.querySelector('dialog[open]')) return;
 
   if (mod && key === 'z') { e.preventDefault(); e.shiftKey ? editor.redo() : editor.undo(); return; }
@@ -1328,8 +1392,7 @@ if (!(startId && openModel(startId))) {
     // Primera vez: figura vacía y la ventana de ejemplos abierta (al cerrarla, a construir)
     createModel('Figura 1');
     editor.setMirror(true);
-    openGallery('examples');
-    $('#gallery-note').textContent = '¡Bienvenido! Abre un ejemplo para ver cómo se hace, o cierra para empezar en blanco';
+    openWelcome();
   }
 }
 

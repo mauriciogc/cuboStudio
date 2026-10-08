@@ -48,6 +48,9 @@ export function initTooltips() {
 
   const show = (el) => {
     current = el;
+    // Dentro de una ventana abierta (que se dibuja encima de todo), el tooltip va dentro de ella
+    const host = el.closest('dialog[open]') ?? document.body;
+    if (tip.parentElement !== host) host.appendChild(tip);
     const { tip: title, key, desc } = el.dataset;
     const keys = key ? key.split('+').map((k) => `<kbd>${esc(k)}</kbd>`).join('<span>+</span>') : '';
     tip.innerHTML = `<div class="tt-head"><b>${esc(title)}</b>${keys ? `<span class="tt-keys">${keys}</span>` : ''}</div>`

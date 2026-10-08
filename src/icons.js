@@ -43,6 +43,7 @@ const PATHS = {
   deform: '<path d="M8 5h8l5 14H3z"/><path d="M8 5 3 19M16 5l5 14" opacity=".35"/>',
   straighten: '<rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16" opacity=".35"/>',
   extrude: '<rect x="4" y="14" width="16" height="7" rx="1"/><path d="M12 11V3M8 7l4-4 4 4"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
   chevronDown: '<path d="m6 9 6 6 6-6"/>',
   chevronLeft: '<path d="m15 18-6-6 6-6"/>',
   chevronRight: '<path d="m9 18 6-6-6-6"/>',

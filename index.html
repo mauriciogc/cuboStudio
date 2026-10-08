@@ -198,7 +198,7 @@
             </div>
           </div>
           <div class="scene-block">
-            <span class="scene-label">Orillas <span class="help" tabindex="0" data-tip-delay="300" data-tip="Orillas de los cubos" data-desc="Rectas: cubos cuadrados, pixel puro. Suaves: bisel ligero. Redondas: tipo juguete. Aplica a todas las figuras y a lo que exportas.">?</span></span>
+            <span class="scene-label">Orillas <span class="help" tabindex="0" data-tip-delay="300" data-tip="Orillas de los cubos" data-desc="Rectas: cubos cuadrados, pixel puro. Suaves: bisel ligero. Redondas: tipo juguete. Se guardan con la figura y salen en lo que exportas.">?</span></span>
             <div class="segmented icons" id="bevel-mode"></div>
           </div>
           <label class="field check">
@@ -222,8 +222,21 @@
         <button class="btn primary" id="btn-new" data-icon="plus"><span>Nueva vacía</span></button>
         <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
       </header>
+      <div class="welcome entry" id="welcome-banner" hidden>
+        <svg class="welcome-cube" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 28.5 9.5v13L16 29.5 3.5 22.5v-13Z" fill="#4fa3e0"/><path d="M16 2.5 28.5 9.5 16 16.5 3.5 9.5Z" fill="#a9d6f5"/><path d="M16 16.5v13l12.5-7v-13Z" fill="#2f7fbd"/></svg>
+        <div class="welcome-text">
+          <b>¡Bienvenido a CuboStudio!</b>
+          <span>Aún no tienes figuras. Cierra esta ventana para empezar en blanco, o elige por dónde empezar.</span>
+        </div>
+        <div class="welcome-actions">
+          <button class="btn primary" id="welcome-tour" data-icon="route"><span>Hacer el recorrido</span></button>
+          <a class="btn" href="guia/index.html#empezar" target="_blank" rel="noopener" data-icon="help"><span>Ver la guía</span></a>
+          <button class="btn ghost" id="welcome-examples" data-icon="folder"><span>Ver ejemplos</span></button>
+        </div>
+      </div>
       <div class="gallery-scroll" tabindex="-1" autofocus>
         <div class="gallery" id="gallery"></div>
+        <p class="gallery-hint" id="examples-hint" hidden>Al abrir un ejemplo se crea <b>una copia para ti</b>: edítala sin miedo, el original no cambia.</p>
         <div class="gallery" id="examples" hidden></div>
       </div>
     </dialog>
@@ -299,32 +312,68 @@
     <!-- Ayuda -->
     <dialog id="help-dialog" class="modal">
       <header>
-        <h2>Atajos</h2>
+        <h2>Ayuda</h2>
         <div class="spacer"></div>
-        <a class="btn primary" href="guia/index.html" target="_blank" rel="noopener" data-icon="help"><span>Ver la guía completa</span></a>
+        <button class="btn small help-tour" id="help-tour" data-icon="route" data-tip="Recorrido por la pantalla" data-desc="Unos globitos te señalan cada parte de la app, paso a paso. Toma un minuto." data-tip-pos="bottom" data-tip-delay="300"><span>Recorrido</span></button>
         <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
       </header>
-      <div class="shortcuts">
-        <div><kbd>A</kbd> Seleccionar (puntero)</div><div></div>
-        <div><kbd>B</kbd> Construir</div><div><kbd>O</kbd> Caja: arrastra, <b>rueda</b> = altura</div>
-        <div><kbd>E</kbd> Borrar</div><div><kbd>P</kbd> Pintar</div>
-        <div><kbd>K</kbd> Rellenar (cubeta)</div><div><kbd>I</kbd> Gotero</div>
-        <div><kbd>S</kbd> Calcomanía</div><div><kbd>M</kbd> Espejo X</div>
-        <div><kbd>L</kbd> Marcar orillas (sólo al modelar)</div><div><kbd>U</kbd> Mover el sol (luz)</div><div><kbd>R</kbd> Selección rectangular</div>
-        <div><kbd>Ctrl/⌘</kbd>+arrastrar Trazo continuo</div><div><kbd>Shift</kbd>+caja Borrar en caja</div>
-        <div><kbd>Shift</kbd>+clic Borrar</div><div><kbd>Alt</kbd>+clic Gotero</div>
-        <div><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>V</kbd> Copiar / pegar</div><div><kbd>Ctrl</kbd>+<kbd>D</kbd> Duplicar selección</div>
-        <div><kbd>Ctrl</kbd>+<kbd>J</kbd> Fusionar en una pieza</div><div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd> Separar</div>
-        <div><kbd>Ctrl</kbd>+<kbd>G</kbd> Agrupar · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> Desagrupar</div><div><kbd>Ctrl</kbd>+clic Una pieza dentro de un grupo</div>
-        <div><kbd>Ctrl</kbd>+<kbd>Z</kbd> Deshacer</div><div><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> Rehacer</div>
-        <div><kbd>←↑→↓</kbd> Mover figura</div><div><kbd>PgUp</kbd>/<kbd>PgDn</kbd> Subir/bajar</div>
-        <div><kbd>F</kbd> Encuadrar cámara</div><div></div>
-        <div><kbd>1</kbd>–<kbd>5</kbd> Vistas</div><div><kbd>G</kbd> Mis figuras</div>
-        <div><kbd>V</kbd> Espacio 3D (cubos flotantes)</div><div><kbd>Q</kbd>/<kbd>W</kbd> Bajar/subir capa</div>
-        <div><kbd>H</kbd> Mostrar/ocultar guías</div><div><kbd>Supr</kbd> Borrar lo seleccionado</div>
-        <div><kbd>Ctrl</kbd>+<kbd>S</kbd> Guardar ahora</div><div><kbd>Ctrl</kbd>+<kbd>E</kbd> Exportar</div>
+      <div class="help-body">
+        <div class="welcome">
+          <svg class="welcome-cube" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 28.5 9.5v13L16 29.5 3.5 22.5v-13Z" fill="#4fa3e0"/><path d="M16 2.5 28.5 9.5 16 16.5 3.5 9.5Z" fill="#a9d6f5"/><path d="M16 16.5v13l12.5-7v-13Z" fill="#2f7fbd"/></svg>
+          <div class="welcome-text">
+            <b>Guía completa</b>
+            <span>Todo explicado con imágenes y animaciones, de lo básico a lo avanzado.</span>
+          </div>
+          <div class="welcome-actions">
+            <a class="btn primary" href="guia/index.html" target="_blank" rel="noopener" data-icon="help"><span>Ver la guía</span></a>
+          </div>
+        </div>
+
+        <h3 class="help-title">Atajos de teclado <span>En Mac, ⌘ en lugar de Ctrl</span></h3>
+        <div class="shortcut-list">
+          <h4>Herramientas</h4>
+          <div class="sc-row"><span class="sc-keys"><kbd>A</kbd></span><span>Seleccionar (puntero)</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>R</kbd></span><span>Selección rectangular</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>B</kbd></span><span>Construir</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>O</kbd></span><span>Caja (la <b>rueda</b> da la altura)</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>E</kbd></span><span>Borrar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>P</kbd></span><span>Pintar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>K</kbd></span><span>Rellenar (cubeta)</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>I</kbd></span><span>Gotero</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>S</kbd></span><span>Calcomanía</span></div>
+          <h4>Ayudas para modelar</h4>
+          <div class="sc-row"><span class="sc-keys"><kbd>M</kbd></span><span>Espejo X</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>L</kbd></span><span>Marcar orillas</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>U</kbd></span><span>Mover el sol</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>V</kbd></span><span>Espacio 3D (cubos flotantes)</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Q</kbd> <kbd>W</kbd></span><span>Bajar / subir capa</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>H</kbd></span><span>Mostrar / ocultar guías</span></div>
+          <h4>Editar</h4>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>Z</kbd></span><span>Deshacer</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></span><span>Rehacer</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>C</kbd> / <kbd>V</kbd></span><span>Copiar / pegar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>D</kbd></span><span>Duplicar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>G</kbd></span><span>Agrupar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>G</kbd></span><span>Desagrupar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>J</kbd></span><span>Fusionar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd></span><span>Separar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Supr</kbd></span><span>Borrar lo seleccionado</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Shift</kbd> + clic</span><span>Borrar (con el puntero: sumar a la selección)</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Alt</kbd> + clic</span><span>Gotero</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> + arrastrar</span><span>Trazo continuo</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> + clic</span><span>Una pieza dentro de un grupo</span></div>
+          <h4>Vista y archivo</h4>
+          <div class="sc-row"><span class="sc-keys"><kbd>1</kbd> – <kbd>5</kbd></span><span>Vistas</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>F</kbd></span><span>Encuadrar la figura</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd></span><span>Mover la figura</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>PgUp</kbd> <kbd>PgDn</kbd></span><span>Subir / bajar la figura</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>G</kbd></span><span>Mis figuras</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>S</kbd></span><span>Guardar ahora</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Ctrl</kbd> <kbd>E</kbd></span><span>Exportar</span></div>
+          <div class="sc-row"><span class="sc-keys"><kbd>Esc</kbd></span><span>Cerrar ventanas y menús</span></div>
+        </div>
+        <p class="muted small help-foot">Tip: arrastra un archivo .json sobre la ventana para importarlo. Todo se guarda solo en este navegador.</p>
       </div>
-      <p class="muted small">Tip: arrastra un archivo .json sobre la ventana para importarlo. Todo se guarda solo en este navegador.</p>
     </dialog>
 
     <input type="file" id="file-input" accept=".json,application/json" hidden />

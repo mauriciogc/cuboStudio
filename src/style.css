@@ -73,7 +73,8 @@ svg { width: 18px; height: 18px; flex: none; }
 .divider { width: 1px; height: 26px; background: var(--border); margin: 0 4px; }
 
 /* ---------- botones ---------- */
-a.btn { text-decoration: none; }
+a.btn { text-decoration: none; color: var(--text); }
+a.btn.primary { color: var(--accent-ink); }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 38px; padding: 0 14px;
@@ -415,6 +416,22 @@ a.btn { text-decoration: none; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
 
 .shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; padding: 18px 20px; font-size: 14px; }
+/* ---------- ayuda: guía, recorrido y atajos ---------- */
+.help-body { padding: 18px 20px 14px; overflow-y: auto; }
+/* La guía va como franja (mismo estilo que la bienvenida); el recorrido, discreto arriba */
+.help-body .welcome { margin: 0; }
+.help-tour { color: var(--muted); background: transparent; box-shadow: inset 0 0 0 1.5px var(--border); }
+.help-tour:hover { color: var(--text); background: var(--surface-2); }
+.help-tour svg { width: 16px; height: 16px; }
+.help-title { display: flex; align-items: baseline; gap: 10px; margin: 22px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.help-title span { text-transform: none; letter-spacing: 0; font-weight: 700; font-size: 12px; }
+/* Atajos: una lista hacia abajo, por grupos; teclas a la izquierda y acción a la derecha */
+.shortcut-list h4 { margin: 16px 0 4px; font-size: 14px; font-weight: 900; }
+.sc-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--surface-2); font-size: 14px; }
+.sc-row:last-child { border-bottom: 0; }
+.sc-keys { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; }
+.help-foot { margin: 14px 0 0; }
+@media (max-width: 520px) { .sc-row { grid-template-columns: 1fr; gap: 2px; } }
 kbd {
   display: inline-block; min-width: 22px; padding: 1px 6px; text-align: center;
   border-radius: 6px; background: var(--surface-2); box-shadow: inset 0 -2px 0 var(--border);
@@ -609,3 +626,57 @@ kbd {
   background: rgba(79, 163, 224, 0.12);
 }
 .gallery-scroll:focus { outline: none; }
+/* Aviso arriba de los ejemplos: texto, como parte de la página */
+.gallery-hint { margin: 0 2px 14px; font-size: 15px; color: var(--muted); }
+.gallery-hint b { color: var(--text); }
+.gallery-hint[hidden] { display: none; }
+
+/* ---------- bienvenida ---------- */
+.welcome {
+  display: flex; align-items: center; gap: 16px; margin: 16px 18px 0; padding: 14px 16px;
+  background: var(--surface); border: 2px solid var(--border); border-radius: 12px;
+}
+.welcome[hidden] { display: none; }
+/* Bienvenida en Mis figuras: una entrada (logo arriba, texto y botones abajo), no una franja */
+.welcome.entry {
+  flex-direction: column; align-items: center; text-align: center; gap: 10px;
+  margin: 0; padding: 34px 24px 30px; border: 0; background: none;
+}
+.welcome.entry .welcome-cube { width: 72px; height: 72px; filter: drop-shadow(0 6px 10px rgba(31, 90, 140, 0.22)); }
+.welcome.entry .welcome-text { align-items: center; gap: 6px; max-width: 460px; }
+.welcome.entry .welcome-text b { font-size: 24px; }
+.welcome.entry .welcome-text span { font-size: 15px; }
+.welcome.entry .welcome-actions { justify-content: center; align-items: center; margin-top: 8px; }
+/* Jerarquía: recorrido (principal) > guía > ejemplos (discreto) */
+.welcome.entry .btn.primary { padding: 12px 22px; font-size: 15px; }
+.btn.ghost { background: none; color: var(--muted); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+/* Con la bienvenida a la vista, el "Aún no tienes figuras" de la galería sobra */
+.welcome:not([hidden]) ~ .gallery-scroll .gallery-empty { display: none; }
+.welcome-cube { width: 40px; height: 40px; flex: none; }
+.welcome-text { flex: 1; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.welcome-text b { font-size: 16px; font-weight: 900; }
+.welcome-text span { color: var(--muted); }
+.welcome-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) { .welcome { flex-direction: column; align-items: flex-start; } }
+
+/* ---------- recorrido ---------- */
+.tour { position: fixed; inset: 0; z-index: 1000; }
+.tour-spot {
+  position: fixed; border-radius: 12px; pointer-events: none;
+  box-shadow: 0 0 0 9999px rgba(24, 18, 10, 0.58), 0 0 0 3px var(--accent);
+  transition: left 0.3s, top 0.3s, width 0.3s, height 0.3s;
+}
+.tour-bubble {
+  position: fixed; width: 320px; max-width: calc(100vw - 24px); padding: 16px 18px 14px;
+  background: var(--surface); border-radius: 14px; box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+  transition: left 0.3s, top 0.3s;
+}
+.tour-bubble h3 { margin: 2px 0 6px; font-size: 18px; font-weight: 900; text-transform: none; letter-spacing: 0; color: var(--text); }
+.tour-bubble p { margin: 0 0 14px; font-size: 14px; line-height: 1.5; color: var(--text); }
+.tour-bubble kbd { font-size: 12px; }
+.tour-count { font-size: 12px; font-weight: 900; color: var(--accent-strong); }
+.tour-actions { display: flex; align-items: center; gap: 8px; }
+.tour-spacer { flex: 1; }
+.tour-skip { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+.tour-skip:hover { color: var(--text); text-decoration: underline; }

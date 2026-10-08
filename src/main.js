@@ -355,6 +355,8 @@ editor.addEventListener('tool', syncTools);
 editor.addEventListener('mirror', syncTools);
 editor.addEventListener('color', syncColor);
 editor.addEventListener('load', syncModel);
+// Al abrir otra figura la selección se vacía: el panel y la píldora deben ponerse al día
+editor.addEventListener('load', () => { syncPanels(); syncSelectBar(); });
 editor.addEventListener('change', () => {
   syncModel();
   if (editor.selection.size || editor.selected) syncSelectBar(); // p. ej. Enderezar tras deformar

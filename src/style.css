@@ -73,6 +73,7 @@ svg { width: 18px; height: 18px; flex: none; }
 .divider { width: 1px; height: 26px; background: var(--border); margin: 0 4px; }
 
 /* ---------- botones ---------- */
+a.btn { text-decoration: none; }
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
   height: 38px; padding: 0 14px;

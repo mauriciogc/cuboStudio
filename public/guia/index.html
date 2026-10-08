@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía de CuboStudio</title>
+  <meta name="description" content="Guía completa de CuboStudio: cómo construir, editar, deformar, iluminar y exportar figuras de cubos." />
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #fdf8f1;
+      --surface: #ffffff;
+      --surface-2: #f6efe4;
+      --border: #eadfce;
+      --text: #2d2a26;
+      --muted: #8a8177;
+      --accent: #4fa3e0;
+      --accent-soft: #e4f1fb;
+      --accent-strong: #2f7fbd;
+      --pink: #ff5fa2;
+      --tip: #fff6d6;
+      --tip-border: #f5d77a;
+      --shadow: 0 6px 24px rgba(80, 55, 20, 0.12);
+      color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif; font-weight: 700;
+      line-height: 1.6; -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent-strong); }
+    img { max-width: 100%; display: block; }
+
+    /* ---------- barra superior ---------- */
+    .top {
+      position: sticky; top: 0; z-index: 10; height: 60px;
+      display: flex; align-items: center; gap: 12px; padding: 0 20px;
+      background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 18px; color: var(--text); text-decoration: none; }
+    .brand svg { width: 28px; height: 28px; }
+    .brand span { color: var(--muted); font-weight: 800; }
+    .top .spacer { flex: 1; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 8px;
+      background: var(--accent); color: #fff; font-weight: 800; text-decoration: none; white-space: nowrap;
+      box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
+    }
+    .btn:hover { background: #3d91cf; }
+    .menu-btn { display: none; border: 0; background: var(--surface-2); border-radius: 8px; padding: 8px 12px; font: inherit; cursor: pointer; }
+
+    /* ---------- estructura ---------- */
+    .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); max-width: 1240px; margin: 0 auto; }
+    nav.toc {
+      position: sticky; top: 60px; align-self: start; height: calc(100vh - 60px); overflow-y: auto;
+      padding: 24px 16px 40px 20px; border-right: 1px solid var(--border);
+    }
+    nav.toc h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+    nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+    nav.toc li { counter-increment: s; }
+    nav.toc a {
+      display: flex; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--text); text-decoration: none; font-size: 15px;
+    }
+    nav.toc a::before { content: counter(s); min-width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 900; margin-top: 1px; }
+    nav.toc a:hover { background: var(--surface-2); }
+    nav.toc a.active { background: var(--accent-soft); color: var(--accent-strong); }
+    nav.toc a.active::before { background: var(--accent); color: #fff; }
+    main { padding: 32px 48px 80px; min-width: 0; }
+
+    /* ---------- contenido ---------- */
+    .hero { text-align: center; padding: 20px 0 10px; }
+    .hero h1 { font-size: 44px; line-height: 1.1; margin: 0 0 12px; font-weight: 900; }
+    .hero p.lead { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 auto 24px; }
+    .hero .shot { margin-top: 24px; }
+    section { padding-top: 28px; margin-top: 28px; border-top: 1px solid var(--border); }
+    section:first-of-type { border-top: 0; }
+    h2 { font-size: 30px; font-weight: 900; margin: 0 0 6px; display: flex; align-items: center; gap: 12px; }
+    h2 .n { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 19px; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15); flex: none; }
+    h3 { font-size: 21px; font-weight: 900; margin: 30px 0 6px; }
+    p { margin: 8px 0 12px; }
+    .sub { color: var(--muted); font-size: 17px; margin-top: 0; }
+    ul, ol { padding-left: 22px; }
+    li { margin: 4px 0; }
+    kbd {
+      display: inline-block; min-width: 24px; padding: 1px 7px; border-radius: 6px; text-align: center;
+      background: var(--surface); border: 1.5px solid var(--border); box-shadow: inset 0 -2px 0 var(--border);
+      font: 800 13px/1.6 'Nunito', sans-serif; color: var(--text);
+    }
+    figure { margin: 18px 0 22px; }
+    /* El marco toma el ancho de su imagen (sin franjas vacías) y se centra */
+    .shot { width: fit-content; max-width: 100%; margin-left: auto; margin-right: auto; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); box-shadow: var(--shadow); background: var(--surface); }
+    .shot.plain { border: 0; box-shadow: none; background: none; }
+    figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; text-align: center; }
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: center; margin: 18px 0; }
+    .split.wide-left { grid-template-columns: 1.3fr 1fr; }
+    .split figure { margin: 0; }
+    .narrow { max-width: 420px; margin-left: auto; margin-right: auto; }
+    .tip, .note {
+      display: block; padding: 14px 16px; border-radius: 12px; margin: 16px 0;
+      background: var(--tip); border: 1px solid var(--tip-border);
+    }
+    .note { background: var(--accent-soft); border-color: #bcdcf3; }
+    .tip b:first-child, .note b:first-child { margin-right: 4px; }
+    .steps { counter-reset: st; list-style: none; padding: 0; }
+    .steps li { counter-increment: st; position: relative; padding: 10px 0 10px 48px; }
+    .steps li::before {
+      content: counter(st); position: absolute; left: 0; top: 9px; width: 32px; height: 32px; border-radius: 50%;
+      background: var(--pink); color: #fff; display: grid; place-items: center; font-weight: 900;
+    }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; background: var(--surface); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 0 var(--border); }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--surface-2); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+    tr:last-child td { border-bottom: 0; }
+    td:first-child { white-space: nowrap; }
+    .legend { counter-reset: lg; list-style: none; padding: 0; columns: 2; column-gap: 28px; }
+    .legend li { counter-increment: lg; break-inside: avoid; padding: 6px 0 6px 40px; position: relative; }
+    .legend li::before {
+      content: counter(lg); position: absolute; left: 0; top: 5px; width: 28px; height: 28px; border-radius: 50%;
+      background: var(--pink); color: #fff; display: grid; place-items: center; font-weight: 900; font-size: 14px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+    }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 16px 0; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .card b { display: block; margin-bottom: 4px; }
+    .card span { color: var(--muted); font-size: 15px; }
+    .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 900; vertical-align: middle; }
+    details.faq { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: 10px 0; padding: 0 16px; }
+    details.faq summary { cursor: pointer; padding: 14px 0; font-weight: 900; list-style: none; }
+    details.faq summary::-webkit-details-marker { display: none; }
+    details.faq summary::before { content: '+'; display: inline-block; width: 22px; color: var(--accent); }
+    details.faq[open] summary::before { content: '–'; }
+    details.faq p { margin-top: 0; padding-bottom: 12px; }
+    footer { text-align: center; color: var(--muted); padding: 40px 20px; border-top: 1px solid var(--border); font-size: 14px; }
+
+    /* ---------- celular ---------- */
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      nav.toc {
+        position: fixed; top: 60px; left: 0; right: 0; height: auto; max-height: calc(100vh - 60px);
+        background: var(--surface); border-right: 0; border-bottom: 1px solid var(--border); box-shadow: var(--shadow);
+        z-index: 9; display: none;
+      }
+      nav.toc.open { display: block; }
+      .menu-btn { display: inline-flex; }
+      main { padding: 20px 16px 60px; }
+      .hero h1 { font-size: 32px; }
+      .split, .split.wide-left { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: 1fr; }
+      .legend { columns: 1; }
+      .top .btn span.long { display: none; }
+      .brand span { display: none; }
+      /* Tablas anchas: se desplazan dentro de su caja */
+      table { display: block; overflow-x: auto; }
+      td:first-child { white-space: normal; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2.5 28.5 9.5v13L16 29.5 3.5 22.5v-13Z" fill="#4fa3e0"/><path d="M16 2.5 28.5 9.5 16 16.5 3.5 9.5Z" fill="#a9d6f5"/><path d="M16 16.5v13l12.5-7v-13Z" fill="#2f7fbd"/></svg>
+      CuboStudio <span>· Guía</span>
+    </a>
+    <div class="spacer"></div>
+    <button class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="toc">Índice</button>
+    <a class="btn" href="../">Abrir <span class="long">CuboStudio</span></a>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" id="toc" aria-label="Índice">
+      <h4>Contenido</h4>
+      <ol>
+        <li><a href="#inicio">Bienvenida</a></li>
+        <li><a href="#pantalla">La pantalla</a></li>
+        <li><a href="#construir">Construir</a></li>
+        <li><a href="#editar">Seleccionar y editar</a></li>
+        <li><a href="#deformar">Deformar y Extruir</a></li>
+        <li><a href="#calcomanias">Calcomanías</a></li>
+        <li><a href="#ayudas">Ayudas para modelar</a></li>
+        <li><a href="#escena">Escena y luz</a></li>
+        <li><a href="#figuras">Tus figuras y exportar</a></li>
+        <li><a href="#atajos">Atajos de teclado</a></li>
+        <li><a href="#faq">Preguntas y trucos</a></li>
+      </ol>
+    </nav>
+
+    <main>
+      <!-- 1 -->
+      <section id="inicio">
+        <div class="hero">
+          <h1>Haz figuras de cubos,<br />como en tus juegos favoritos</h1>
+          <p class="lead">CuboStudio es un editor de figuras 3D hechas de cubos, al estilo de <i>Pokémon Quest</i> y <i>Crossy Road</i>. Funciona en tu navegador, no necesita cuenta y todo se guarda solo.</p>
+          <a class="btn" href="../">Empezar a construir</a>
+          <figure class="shot"><img src="img/portada.webp" alt="CuboStudio con el ejemplo Voxel world abierto" /></figure>
+        </div>
+
+        <h3>Tu primera figura en un minuto</h3>
+        <ol class="steps">
+          <li>Abre CuboStudio. La primera vez aparecen los <b>ejemplos</b>: abre uno para ver cómo está hecho, o cierra la ventana para empezar en blanco.</li>
+          <li>Con <b>Construir</b> <kbd>B</kbd> activo, haz clic en el piso: aparece tu primer cubo. Haz clic sobre una de sus caras para poner otro pegado.</li>
+          <li>Elige otro color en el panel de la derecha y sigue construyendo. Si te equivocas, <kbd>Shift</kbd> + clic borra, y <kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace.</li>
+          <li>Arrastra para girar la cámara y usa la rueda para acercarte. Cuando te guste, presiona <b>Exportar</b> y descarga tu imagen.</li>
+        </ol>
+        <figure class="shot narrow"><img src="img/bienvenida.webp" alt="Ventana de bienvenida con los ejemplos" loading="lazy" /><figcaption>La primera vez se abren los ejemplos. Al abrir uno se crea una copia para editarla sin miedo.</figcaption></figure>
+        <div class="note"><b>Todo se guarda solo.</b> Tus figuras viven en este navegador. Para pasarlas a otra compu, expórtalas como <b>Proyecto (.json)</b> e impórtalas allá.</div>
+      </section>
+
+      <!-- 2 -->
+      <section id="pantalla">
+        <h2><span class="n">2</span>La pantalla</h2>
+        <p class="sub">Todo lo que ves de un vistazo.</p>
+        <figure class="shot"><img src="img/pantalla.webp" alt="Pantalla de CuboStudio con números" loading="lazy" /></figure>
+        <ol class="legend">
+          <li><b>Nombre de la figura.</b> Haz clic para cambiarlo. Junto a él se indica si ya se guardó.</li>
+          <li><b>Herramientas.</b> Construir, borrar, pintar, seleccionar y las ayudas para modelar. Cada una tiene su tecla.</li>
+          <li><b>Vistas.</b> Iso, Frente, Lado, Atrás y Arriba (teclas <kbd>1</kbd>–<kbd>5</kbd>), y el botón de encuadrar.</li>
+          <li><b>La píldora.</b> Aparece junto a lo que seleccionas, con sus modos y acciones.</li>
+          <li><b>Panel.</b> Colores, formas y escena. Muestra sólo lo que sirve para lo que estás haciendo.</li>
+          <li><b>Contador.</b> Cuántos cubos tiene tu figura.</li>
+          <li><b>Mis figuras, Importar y Exportar.</b> Tu galería, abrir archivos y guardar imágenes o modelos 3D.</li>
+        </ol>
+        <h3>La cámara</h3>
+        <table>
+          <tr><th>Quiero…</th><th>Cómo</th></tr>
+          <tr><td>Girar alrededor</td><td>Arrastra con el botón izquierdo sobre el piso o el cielo.</td></tr>
+          <tr><td>Desplazar</td><td>Arrastra con el botón derecho.</td></tr>
+          <tr><td>Acercar / alejar</td><td>Rueda del mouse o pellizco en el trackpad.</td></tr>
+          <tr><td>Ver de frente, de lado…</td><td>Teclas <kbd>1</kbd> a <kbd>5</kbd> o los botones de arriba.</td></tr>
+          <tr><td>Encuadrar la figura</td><td><kbd>F</kbd></td></tr>
+        </table>
+        <div class="tip"><b>Tip:</b> las flechitas a los lados de la pantalla esconden la barra de herramientas o el panel, para tener más espacio.</div>
+      </section>
+
+      <!-- 3 -->
+      <section id="construir">
+        <h2><span class="n">3</span>Construir</h2>
+        <p class="sub">Poner, quitar y pintar piezas.</p>
+        <div class="split wide-left">
+          <table>
+            <tr><th>Herramienta</th><th>Tecla</th><th>Qué hace</th></tr>
+            <tr><td>Construir</td><td><kbd>B</kbd></td><td>Pone una pieza en el piso o sobre una cara.</td></tr>
+            <tr><td>Caja</td><td><kbd>O</kbd></td><td>Arrastra para llenar un área; la rueda da la altura.</td></tr>
+            <tr><td>Borrar</td><td><kbd>E</kbd></td><td>Quita la pieza.</td></tr>
+            <tr><td>Pintar</td><td><kbd>P</kbd></td><td>Clic, o mantén el clic y arrastra, para pintar de corrido.</td></tr>
+            <tr><td>Rellenar</td><td><kbd>K</kbd></td><td>Pinta todas las piezas conectadas del mismo color.</td></tr>
+            <tr><td>Gotero</td><td><kbd>I</kbd></td><td>Toma el color de una pieza.</td></tr>
+          </table>
+          <figure class="shot plain narrow" style="max-width:110px"><img src="img/herramientas.webp" alt="Barra de herramientas" loading="lazy" /></figure>
+        </div>
+        <div class="split">
+          <figure class="shot"><img src="img/construir.webp" alt="Vista previa azul de un cubo nuevo sobre otros" loading="lazy" /><figcaption>Antes del clic ves dónde va a quedar la pieza.</figcaption></figure>
+          <figure class="shot"><img src="img/caja.webp" alt="Caja arrastrada sobre el piso" loading="lazy" /><figcaption>Caja <kbd>O</kbd>: arrastra un rectángulo y gira la rueda para darle altura.</figcaption></figure>
+        </div>
+        <div class="cards">
+          <div class="card"><b><kbd>Shift</kbd> + clic</b><span>Borra, sin cambiar de herramienta.</span></div>
+          <div class="card"><b><kbd>Alt</kbd> + clic</b><span>Toma el color (gotero).</span></div>
+          <div class="card"><b><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + arrastrar</b><span>Construye o borra de corrido, en un solo paso de deshacer.</span></div>
+        </div>
+
+        <h3>Formas de pieza</h3>
+        <p>No todo tiene que ser cubo. En <b>Forma de la pieza</b> eliges cubo, esfera, cilindro, cono, pirámide o cuña. Las formas apuntan hacia afuera de la cara donde haces clic.</p>
+        <figure class="shot"><img src="img/formas.webp" alt="Cubo, esfera, cilindro, cono, pirámide y cuña" loading="lazy" /></figure>
+
+        <h3>Opacidad: agua y vidrio</h3>
+        <div class="split">
+          <div>
+            <p>Baja la <b>Opacidad</b> (10–100 %) para hacer agua, vidrio o hielo. Dentro de las piezas transparentes se puede seguir construyendo, por ejemplo peces dentro del agua.</p>
+            <p>Se aplica a lo que construyes, pintas o tienes seleccionado.</p>
+          </div>
+          <figure class="shot"><img src="img/opacidad.webp" alt="Isla con agua transparente" loading="lazy" /></figure>
+        </div>
+
+        <h3>Brilla: piezas que dan luz</h3>
+        <div class="split">
+          <figure class="shot"><img src="img/brilla.webp" alt="Calavera con ojos rojos brillantes" loading="lazy" /></figure>
+          <div>
+            <p>Marca <b>Brilla</b> y la pieza se ve en su color pleno e <b>ilumina lo que tiene cerca</b> con luz de su color: lámparas, fuego, lava u ojos encendidos.</p>
+            <p>Luce mucho más con la luz de <b>Noche</b> (ver <a href="#escena">Escena y luz</a>).</p>
+          </div>
+        </div>
+        <div class="tip"><b>Tip:</b> si construyes sobre una pieza aplastada o desplazada, el cubo nuevo queda pegado a su cara real, sin dejar hueco.</div>
+      </section>
+
+      <!-- 4 -->
+      <section id="editar">
+        <h2><span class="n">4</span>Seleccionar y editar</h2>
+        <p class="sub">Mover, girar, escalar, copiar, agrupar y fusionar.</p>
+        <h3>Seleccionar</h3>
+        <ul>
+          <li><b>Seleccionar</b> <kbd>A</kbd>: clic en una pieza. <kbd>Shift</kbd> + clic suma o quita piezas. Clic en el piso deselecciona.</li>
+          <li><b>Selección rectangular</b> <kbd>R</kbd>: arrastra un rectángulo y se selecciona todo lo que quede dentro, también lo de atrás.</li>
+          <li>Al seleccionar, las piezas se resaltan en azul <b>con su forma real</b>.</li>
+        </ul>
+        <figure class="shot"><img src="img/rectangulo.webp" alt="Rectángulo de selección sobre el gato" loading="lazy" /></figure>
+
+        <h3>La píldora</h3>
+        <p>Al seleccionar aparece una barrita flotante con todo lo que puedes hacer:</p>
+        <figure class="shot plain narrow" style="max-width:520px"><img src="img/pildora.webp" alt="Píldora de selección" loading="lazy" /></figure>
+        <table>
+          <tr><th>Botón</th><th>Para qué</th></tr>
+          <tr><td>Sólo seleccionar</td><td>Sin flechas ni manijas: junta varias piezas sin que nada estorbe.</td></tr>
+          <tr><td>Mover</td><td>Flechas X / Y / Z, en pasos de 0.1.</td></tr>
+          <tr><td>Girar</td><td>Aros de 90°.</td></tr>
+          <tr><td>Escalar</td><td>Manijas en las caras (crece hacia ese lado) y esquinas amarillas (crece parejo).</td></tr>
+          <tr><td>Deformar · Extruir</td><td>Cambiar la forma de una cara o sacar piezas nuevas (sección <a href="#deformar">5</a>).</td></tr>
+          <tr><td>Agrupar · Fusionar · Duplicar · Copiar · Eliminar</td><td>Las acciones sobre lo seleccionado.</td></tr>
+        </table>
+        <figure class="shot plain"><img src="img/mover-girar-escalar.webp" alt="Gizmo de Mover, Girar y Escalar" loading="lazy" /></figure>
+
+        <h3>Imanes y topes</h3>
+        <ul>
+          <li><b>Escalar:</b> el tamaño se pega un momento en los números enteros (1, 2, 3…), y las manijas dan un saltito. Si sigues jalando, se suelta.</li>
+          <li><b>Mover:</b> se pega al alinear con la cuadrícula y al tocar otra pieza.</li>
+          <li>Nada se sale de la cuadrícula: al mover o escalar, se frena en la orilla.</li>
+        </ul>
+
+        <h3>Copiar, pegar y duplicar</h3>
+        <p><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd> copia y pega, también entre figuras distintas. <kbd>Ctrl</kbd> + <kbd>D</kbd> duplica al instante. Lo pegado queda seleccionado para acomodarlo.</p>
+
+        <h3>Grupos</h3>
+        <div class="split">
+          <div>
+            <p><b>Agrupar</b> <kbd>Ctrl</kbd> + <kbd>G</kbd> une varias piezas: un clic en cualquiera selecciona el grupo completo, y al pasar el mouse se resalta todo.</p>
+            <p>Para tomar una sola pieza de un grupo, usa <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic. <b>Desagrupar</b> es <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd>.</p>
+          </div>
+          <figure class="shot"><img src="img/grupo.webp" alt="Árbol agrupado resaltado al pasar el mouse" loading="lazy" /></figure>
+        </div>
+
+        <h3>Fusionar y Separar</h3>
+        <p><b>Fusionar</b> <kbd>Ctrl</kbd> + <kbd>J</kbd> une cubos <b>de un solo color</b> en una sola pieza: un bloque, o una forma como L, E o T, con orillas limpias. <b>Separar</b> <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>J</kbd> la regresa a cubos sueltos.</p>
+        <figure class="shot plain"><img src="img/fusionar.webp" alt="Cinco cubos antes y una pieza en L después de fusionar" loading="lazy" /></figure>
+      </section>
+
+      <!-- 5 -->
+      <section id="deformar">
+        <h2><span class="n">5</span>Deformar y Extruir</h2>
+        <p class="sub">Rampas, techos, pirámides… y sacar piezas nuevas de una cara.</p>
+        <h3>Deformar</h3>
+        <div class="split">
+          <figure class="shot"><img src="img/deformar.gif" alt="Animación: se achica un lado de la cara de arriba y luego se recorre" loading="lazy" /></figure>
+          <div>
+            <ol class="steps">
+              <li>Selecciona <b>un</b> cubo o bloque y elige <b>Deformar</b> en la píldora.</li>
+              <li>Elige la cara con los <b>cuadritos blancos</b>.</li>
+              <li>Jala una <b>manija naranja</b> para achicar o agrandar ese lado, o la <b>azul</b> del centro para inclinar la cara.</li>
+            </ol>
+          </div>
+        </div>
+        <figure class="shot"><img src="img/deformar-formas.webp" alt="Techo, pirámide, rampa, pieza inclinada y embudo" loading="lazy" /><figcaption>Techo, pirámide, rampa, pieza inclinada y embudo: todo sale de un bloque.</figcaption></figure>
+        <ul>
+          <li><b>Imán:</b> al tamaño original, al lado recto, a la mitad, al filo (ancho 0), a 45° y al centro.</li>
+          <li><b>Enderezar</b> (en la píldora) regresa la pieza a caja.</li>
+          <li>La deformación se conserva al mover, girar, escalar, copiar y con Espejo.</li>
+        </ul>
+
+        <h3>Extruir</h3>
+        <div class="split">
+          <div>
+            <p>Elige <b>Extruir</b> en la píldora y aparecen <b>cuadritos morados</b> en las 6 caras.</p>
+            <p><b>Jala directo</b> el de la cara que quieras, como al escalar, y sale una <b>pieza nueva</b> del tamaño y forma exactos de esa cara, del mismo color.</p>
+            <p>Al soltar, la pieza nueva queda seleccionada: sigue extruyendo tramo por tramo para sacar cuellos, patas o ramas.</p>
+          </div>
+          <figure class="shot"><img src="img/extruir.gif" alt="Animación: se extruyen tramos hacia arriba y hacia un lado" loading="lazy" /></figure>
+        </div>
+        <div class="tip"><b>Tip:</b> extruye desde una cara deformada (por ejemplo, la punta de un tronco que se adelgaza) y el tramo nuevo sigue con esa misma forma.</div>
+      </section>
+
+      <!-- 6 -->
+      <section id="calcomanias">
+        <h2><span class="n">6</span>Calcomanías</h2>
+        <p class="sub">Ojos, bocas, mejillas y más, sin construirlos cubo por cubo.</p>
+        <figure class="shot"><img src="img/calcomanias.webp" alt="Herramienta de calcomanías con el panel de diseños" loading="lazy" /></figure>
+        <ul>
+          <li>Con <b>Calcomanía</b> <kbd>S</kbd>, elige un diseño en el panel y haz clic en una cara. Se pega con el color actual.</li>
+          <li>Haz clic sobre una calcomanía ya pegada para cambiarle diseño y color.</li>
+          <li>Con <b>Seleccionar</b> la mueves, la agrandas con Escalar o la borras con <kbd>Supr</kbd>.</li>
+          <li>Viajan con su pieza: si mueves o giras la pieza, la calcomanía va con ella.</li>
+        </ul>
+      </section>
+
+      <!-- 7 -->
+      <section id="ayudas">
+        <h2><span class="n">7</span>Ayudas para modelar</h2>
+        <h3>Espejo <kbd>M</kbd></h3>
+        <div class="split">
+          <div>
+            <p>Todo lo que construyes, pintas o borras se repite del otro lado: perfecto para personajes simétricos.</p>
+            <p>Además, cada pieza tiene su <b>pareja</b> del otro lado, que se resalta en azul claro y cambia con ella. Al mover a los lados va <b>al revés</b>; arriba, abajo, adelante y atrás, igual.</p>
+          </div>
+          <figure class="shot"><img src="img/espejo.gif" alt="Animación: al mover una pieza a la derecha, su pareja se mueve a la izquierda" loading="lazy" /></figure>
+        </div>
+        <h3>Marcar orillas <kbd>L</kbd></h3>
+        <div class="split">
+          <figure class="shot"><img src="img/marcar-orillas.webp" alt="Gato con el contorno de cada cubo marcado" loading="lazy" /></figure>
+          <p>Dibuja el contorno de cada pieza para distinguirlas, muy útil con orillas rectas. Sólo se ve mientras modelas: <b>no sale al exportar</b>.</p>
+        </div>
+        <h3>Espacio 3D <kbd>V</kbd></h3>
+        <div class="split">
+          <p>Muestra un plano para poner <b>cubos flotantes</b>, sin nada debajo. Con <kbd>Q</kbd> / <kbd>W</kbd> bajas o subes de capa, y en la barra de abajo eliges si el plano va horizontal, de frente o de lado.</p>
+          <figure class="shot"><img src="img/espacio3d.webp" alt="Plano del espacio 3D sobre unos cubos" loading="lazy" /></figure>
+        </div>
+        <h3>Imágenes guía <kbd>H</kbd></h3>
+        <p>Pon imágenes de frente, lado y atrás para calcar, como los <i>image planes</i> de los programas 3D. Pueden ir al fondo o en cruz, con altura, posición, volteo y opacidad. Se guardan con la figura y no salen al exportar.</p>
+        <figure class="shot"><img src="img/guias.webp" alt="Imágenes guía de frente y lado detrás de la figura" loading="lazy" /></figure>
+      </section>
+
+      <!-- 8 -->
+      <section id="escena">
+        <h2><span class="n">8</span>Escena y luz</h2>
+        <p class="sub">Lo que es de toda la figura. Aparece en el panel cuando no estás creando ni editando piezas.</p>
+        <div class="split">
+          <figure class="shot plain narrow" style="max-width:300px"><img src="img/escena.webp" alt="Sección Escena del panel con Ajustar luz abierto" loading="lazy" /></figure>
+          <ul>
+            <li><b>Cuadrícula:</b> 8, 16, 24, 32, 48, 64 o 128 cubos por lado.</li>
+            <li><b>Fondo:</b> pradera, cielo, arena, nube o noche.</li>
+            <li><b>Luz:</b> ambientes listos y el botón <b>Ajustar</b>.</li>
+            <li><b>Orillas:</b> rectas, suaves o redondas.</li>
+            <li><b>Líneas del piso</b> y <b>Vaciar figura</b>.</li>
+          </ul>
+        </div>
+        <h3>Orillas</h3>
+        <figure class="shot plain"><img src="img/orillas.webp" alt="El gato con orillas rectas, suaves y redondas" loading="lazy" /><figcaption>Rectas para un look pixel; suaves (las de siempre); redondas tipo juguete. Se guardan con la figura.</figcaption></figure>
+        <h3>Ambientes de luz</h3>
+        <figure class="shot plain"><img src="img/luz.webp" alt="Voxel world de día, atardecer, noche y estudio" loading="lazy" /></figure>
+        <p>En <b>Ajustar</b> cambias el sol (color, intensidad, giro, altura, sombras y su suavidad), el ambiente y la fuerza de las piezas que brillan. La luz se guarda con cada figura y sale en las imágenes que exportas.</p>
+        <h3>Mover el sol <kbd>U</kbd></h3>
+        <figure class="shot"><img src="img/sol.gif" alt="Animación: el sol se arrastra por el cubo de trabajo y las sombras cambian" loading="lazy" /><figcaption>Arrastra el sol por los lados y el techo del cubo de trabajo: las sombras se mueven en vivo.</figcaption></figure>
+      </section>
+
+      <!-- 9 -->
+      <section id="figuras">
+        <h2><span class="n">9</span>Tus figuras y exportar</h2>
+        <h3>Mis figuras <kbd>G</kbd></h3>
+        <figure class="shot"><img src="img/galeria.webp" alt="Galería de figuras guardadas" loading="lazy" /></figure>
+        <ul>
+          <li>Todas tus figuras con su miniatura, su luz y su fondo. Se guardan solas mientras trabajas.</li>
+          <li>Duplica o elimina desde cada tarjeta. <b>Nueva vacía</b> empieza desde cero.</li>
+          <li>La pestaña <b>Ejemplos</b> tiene figuras listas: al abrir una se crea una copia para editar.</li>
+        </ul>
+        <h3>Exportar <kbd>Ctrl</kbd> + <kbd>E</kbd></h3>
+        <figure class="shot"><img src="img/exportar.webp" alt="Ventana de exportar con vista previa en formato vertical" loading="lazy" /></figure>
+        <table>
+          <tr><th>Formato</th><th>Tamaño</th><th>Para</th></tr>
+          <tr><td>Ajustado a la figura</td><td>512 – 2048 px</td><td>Stickers y PNG sin fondo.</td></tr>
+          <tr><td>Tal como se ve en pantalla</td><td>512 – 2048 px</td><td>Una captura con tu encuadre.</td></tr>
+          <tr><td>Cuadrado 1:1</td><td>1080 × 1080</td><td>Post de Instagram, foto de perfil.</td></tr>
+          <tr><td>Vertical 4:5</td><td>1080 × 1350</td><td>Feed de Instagram.</td></tr>
+          <tr><td>Historia 9:16</td><td>1080 × 1920</td><td>Historias, Reels, TikTok, WhatsApp.</td></tr>
+          <tr><td>Fondo de iPhone</td><td>1179 × 2556</td><td>Fondo de pantalla (la figura baja para no tapar el reloj).</td></tr>
+          <tr><td>Clásico 4:3 / 3:4</td><td>1600 × 1200</td><td>Fotos y presentaciones.</td></tr>
+          <tr><td>Horizontal 16:9</td><td>1920 × 1080</td><td>YouTube, fondo de compu.</td></tr>
+        </table>
+        <figure class="shot plain"><img src="img/formatos.webp" alt="La calavera en cuadrado, vertical, historia y horizontal" loading="lazy" /></figure>
+        <ul>
+          <li>En los formatos de redes eliges el tamaño de la figura (chica, mediana o grande); la sombra llega hasta la orilla de la imagen.</li>
+          <li><b>Modelo 3D (.glb):</b> para Blender, visores 3D o tu sitio web. Lleva el sol, la luz de las piezas que brillan y sus colores.</li>
+          <li><b>Proyecto (.json):</b> la figura completa (luz, fondo y orillas incluidos) para volver a importarla. Usa <b>Importar</b> o arrástralo a la ventana.</li>
+        </ul>
+      </section>
+
+      <!-- 10 -->
+      <section id="atajos">
+        <h2><span class="n">10</span>Atajos de teclado</h2>
+        <p class="sub">En Mac usa <kbd>⌘</kbd> donde dice <kbd>Ctrl</kbd>. La lista también está en el botón <b>?</b> de la app.</p>
+        <table>
+          <tr><th>Tecla</th><th>Acción</th><th>Tecla</th><th>Acción</th></tr>
+          <tr><td><kbd>A</kbd></td><td>Seleccionar</td><td><kbd>R</kbd></td><td>Selección rectangular</td></tr>
+          <tr><td><kbd>B</kbd></td><td>Construir</td><td><kbd>O</kbd></td><td>Caja</td></tr>
+          <tr><td><kbd>E</kbd></td><td>Borrar</td><td><kbd>P</kbd></td><td>Pintar</td></tr>
+          <tr><td><kbd>K</kbd></td><td>Rellenar</td><td><kbd>I</kbd></td><td>Gotero</td></tr>
+          <tr><td><kbd>S</kbd></td><td>Calcomanía</td><td><kbd>M</kbd></td><td>Espejo</td></tr>
+          <tr><td><kbd>U</kbd></td><td>Mover el sol</td><td><kbd>L</kbd></td><td>Marcar orillas</td></tr>
+          <tr><td><kbd>V</kbd></td><td>Espacio 3D</td><td><kbd>Q</kbd> / <kbd>W</kbd></td><td>Bajar / subir capa</td></tr>
+          <tr><td><kbd>H</kbd></td><td>Mostrar / ocultar guías</td><td><kbd>G</kbd></td><td>Mis figuras</td></tr>
+          <tr><td><kbd>1</kbd> – <kbd>5</kbd></td><td>Vistas</td><td><kbd>F</kbd></td><td>Encuadrar</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>Z</kbd></td><td>Deshacer</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>Rehacer</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>C</kbd> / <kbd>V</kbd></td><td>Copiar / pegar</td><td><kbd>Ctrl</kbd> <kbd>D</kbd></td><td>Duplicar</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>G</kbd></td><td>Agrupar</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>G</kbd></td><td>Desagrupar</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>J</kbd></td><td>Fusionar</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd></td><td>Separar</td></tr>
+          <tr><td><kbd>Ctrl</kbd> <kbd>S</kbd></td><td>Guardar ahora</td><td><kbd>Ctrl</kbd> <kbd>E</kbd></td><td>Exportar</td></tr>
+          <tr><td><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></td><td>Mover la figura</td><td><kbd>RePág</kbd> / <kbd>AvPág</kbd></td><td>Subir / bajar la figura</td></tr>
+          <tr><td><kbd>Supr</kbd></td><td>Borrar lo seleccionado</td><td><kbd>Esc</kbd></td><td>Cerrar ventanas y menús</td></tr>
+        </table>
+        <div class="cards">
+          <div class="card"><b><kbd>Shift</kbd> + clic</b><span>Borrar (o sumar a la selección con el puntero).</span></div>
+          <div class="card"><b><kbd>Alt</kbd> + clic</b><span>Gotero desde cualquier herramienta.</span></div>
+          <div class="card"><b><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic</b><span>Una sola pieza dentro de un grupo.</span></div>
+        </div>
+      </section>
+
+      <!-- 11 -->
+      <section id="faq">
+        <h2><span class="n">11</span>Preguntas y trucos</h2>
+        <details class="faq"><summary>¿Dónde se guardan mis figuras?</summary><p>En el navegador que estás usando, en tu compu. No se suben a ningún lado. Si borras los datos del navegador o cambias de equipo, exporta antes tus figuras como <b>Proyecto (.json)</b>.</p></details>
+        <details class="faq"><summary>Me equivoqué, ¿cómo regreso?</summary><p><kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace (hasta 300 pasos) y <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> rehace. Arrastrar un gizmo, un trazo de pintura o una deformación cuentan como un solo paso.</p></details>
+        <details class="faq"><summary>¿Por qué no puedo fusionar unas piezas?</summary><p>Fusionar sólo une cubos y bloques <b>del mismo color</b> (y misma opacidad). Las esferas, conos y piezas deformadas no se fusionan.</p></details>
+        <details class="faq"><summary>La cuadrícula no me deja hacerla más chica.</summary><p>La figura tiene que caber en el tamaño nuevo. Mueve la figura con las flechas del teclado o quita lo que sobra, y vuelve a intentarlo.</p></details>
+        <details class="faq"><summary>¿Cómo hago un personaje simétrico rápido?</summary><p>Activa <b>Espejo</b> <kbd>M</kbd> antes de empezar: todo lo que construyas se repite del otro lado, y al editar una pieza su pareja cambia con ella.</p></details>
+        <details class="faq"><summary>¿Cómo consigo una imagen bonita para redes?</summary><p>Elige un ambiente de luz (Atardecer o Noche lucen mucho), mueve el sol <kbd>U</kbd> hasta que te gusten las sombras, y en Exportar elige <b>Vertical 4:5</b> o <b>Historia 9:16</b> con la figura en tamaño Grande.</p></details>
+        <details class="faq"><summary>¿Se puede imprimir en 3D?</summary><p>Por ahora puedes exportar el <b>Modelo 3D (.glb)</b> y convertirlo en tu programa de impresión. La exportación directa a STL/3MF está en la lista de ideas.</p></details>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    CuboStudio · hecho con Three.js · <a href="../">Abrir la app</a> · <a href="https://github.com/mauriciogc/cuboStudio">Código en GitHub</a>
+  </footer>
+
+  <script>
+    // Índice: marca la sección visible y, en celular, se abre con el botón
+    const links = [...document.querySelectorAll('nav.toc a')];
+    const byId = new Map(links.map((a) => [a.getAttribute('href').slice(1), a]));
+    const spy = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((a) => a.classList.remove('active'));
+        byId.get(e.target.id)?.classList.add('active');
+      }
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    document.querySelectorAll('main section').forEach((s) => spy.observe(s));
+    const toc = document.getElementById('toc');
+    const menu = document.getElementById('menu-btn');
+    menu.addEventListener('click', () => {
+      const open = toc.classList.toggle('open');
+      menu.setAttribute('aria-expanded', open);
+    });
+    links.forEach((a) => a.addEventListener('click', () => { toc.classList.remove('open'); menu.setAttribute('aria-expanded', 'false'); }));
+  </script>
+</body>
+</html>

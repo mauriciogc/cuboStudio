@@ -3,7 +3,7 @@
 Editor de figuras hechas de cubos (vóxeles) al estilo *Pokémon Quest* y *Crossy Road*, hecho con
 Three.js + Vite, sin frameworks. Todo corre en el navegador y se guarda solo.
 
-**Pruébalo:** https://mauriciogc.github.io/cuboStudio/
+**Pruébalo:** https://mauriciogc.github.io/cuboStudio/ · **Guía completa con imágenes:** https://mauriciogc.github.io/cuboStudio/guia/
 
 ```bash
 npm install
@@ -228,6 +228,7 @@ Cada ejemplo se descarga sólo cuando hace falta.
 | `src/tooltip.js` | Tooltips con nombre, atajo y descripción |
 | `src/icons.js` / `src/palette.js` | Íconos de la interfaz y paleta de colores |
 | `src/main.js` | Interfaz: paneles, píldora de selección, galería, modales, atajos y autoguardado |
+| `public/guia/` | Guía para usuarios (página con capturas y animaciones de la app) |
 
 Para depurar, en la consola del navegador está `window.cubo`
 (`stage`, `editor`, `store`, `refs`, `renderStandalone`, `VoxelModel`, `setBevel`).

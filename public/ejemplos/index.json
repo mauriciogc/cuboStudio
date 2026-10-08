@@ -57,6 +57,15 @@
     "background": "noche"
   },
   {
+    "id": "astronauta",
+    "name": "Astronauta",
+    "file": "astronauta.json",
+    "thumb": "astronauta.webp",
+    "size": 24,
+    "pieces": 411,
+    "background": "noche"
+  },
+  {
     "id": "pollo",
     "name": "Pollo",
     "file": "pollo.json",

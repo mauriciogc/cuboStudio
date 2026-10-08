@@ -128,6 +128,28 @@
     .card b { display: block; margin-bottom: 4px; }
     .card span { color: var(--muted); font-size: 15px; }
     .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: 12px; font-weight: 900; vertical-align: middle; }
+    .tool-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin: 16px 0 20px; }
+    .tool-grid.three { grid-template-columns: repeat(3, 1fr); }
+    .tool-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 12px 4px; }
+    .tool-card figure { margin: 0 0 10px; }
+    .tool-card .shot { width: 100%; box-shadow: none; }
+    .tool-card .shot img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; } /* todas iguales: títulos alineados */
+    .tool-card h4 { margin: 4px 4px 2px; font-size: 17px; font-weight: 900; }
+    .tool-card p { margin: 0 4px 10px; font-size: 15px; color: var(--muted); }
+    /* Icono de la herramienta, como en la barra de la app */
+    .ico { width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; color: var(--text); }
+    .tool-card h4 { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    .tool-card h4 .ico { width: 30px; height: 30px; padding: 6px; margin-right: 6px; border-radius: 9px; background: var(--accent-soft, #e3f1fb); color: var(--accent-strong, #2f7fbf); box-sizing: border-box; flex: none; }
+    h3 .ico { width: 32px; height: 32px; padding: 6px; margin-right: 10px; vertical-align: -8px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-strong); box-sizing: border-box; }
+    td .ico { margin-right: 4px; }
+    /* Muestra de color (fondo, luz), como en el panel de la app */
+    .ico-swatch { display: inline-block; background: var(--sw); border-radius: 5px; border: 1px solid rgba(0,0,0,.12); }
+    td .ico-swatch { width: 16px; height: 16px; vertical-align: -3px; margin-right: 6px; }
+    h3 .ico-swatch { padding: 0; border: 6px solid var(--accent-soft); background: var(--sw) padding-box; }
+    /* Variantes de la herramienta (teclas que cambian lo que hace) */
+    .variants { list-style: none; margin: 0 4px 12px; padding: 10px 0 0; border-top: 1px dashed var(--border); font-size: 14px; color: var(--muted); }
+    .variants li { margin: 4px 0; }
+    .variants .ico { width: 15px; height: 15px; margin-right: 4px; color: var(--muted); }
     details.faq { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin: 10px 0; padding: 0 16px; }
     details.faq summary { cursor: pointer; padding: 14px 0; font-weight: 900; list-style: none; }
     details.faq summary::-webkit-details-marker { display: none; }
@@ -149,7 +171,7 @@
       main { padding: 20px 16px 60px; }
       .hero h1 { font-size: 32px; }
       .split, .split.wide-left { grid-template-columns: 1fr; }
-      .cards { grid-template-columns: 1fr; }
+      .cards, .tool-grid, .tool-grid.three { grid-template-columns: 1fr; }
       .legend { columns: 1; }
       .top .btn span.long { display: none; }
       .brand span { display: none; }
@@ -175,15 +197,15 @@
       <h4>Contenido</h4>
       <ol>
         <li><a href="#inicio">Bienvenida</a></li>
+        <li><a href="#empezar">Al empezar</a></li>
         <li><a href="#pantalla">La pantalla</a></li>
         <li><a href="#construir">Construir</a></li>
         <li><a href="#editar">Seleccionar y editar</a></li>
-        <li><a href="#deformar">Deformar y Extruir</a></li>
+        <li><a href="#imanes">Imanes, copiar y pegar</a></li>
         <li><a href="#calcomanias">Calcomanías</a></li>
         <li><a href="#ayudas">Ayudas para modelar</a></li>
         <li><a href="#escena">Escena y luz</a></li>
         <li><a href="#figuras">Tus figuras y exportar</a></li>
-        <li><a href="#atajos">Atajos de teclado</a></li>
         <li><a href="#faq">Preguntas y trucos</a></li>
       </ol>
     </nav>
@@ -194,24 +216,34 @@
         <div class="hero">
           <h1>Haz figuras de cubos,<br />como en tus juegos favoritos</h1>
           <p class="lead">CuboStudio es un editor de figuras 3D hechas de cubos, al estilo de <i>Pokémon Quest</i> y <i>Crossy Road</i>. Funciona en tu navegador, no necesita cuenta y todo se guarda solo.</p>
-          <a class="btn" href="../">Empezar a construir</a>
           <figure class="shot"><img src="img/portada.webp" alt="CuboStudio con el ejemplo Voxel world abierto" /></figure>
         </div>
 
-        <h3>Tu primera figura en un minuto</h3>
-        <ol class="steps">
-          <li>Abre CuboStudio. La primera vez aparecen los <b>ejemplos</b>: abre uno para ver cómo está hecho, o cierra la ventana para empezar en blanco.</li>
-          <li>Con <b>Construir</b> <kbd>B</kbd> activo, haz clic en el piso: aparece tu primer cubo. Haz clic sobre una de sus caras para poner otro pegado.</li>
-          <li>Elige otro color en el panel de la derecha y sigue construyendo. Si te equivocas, <kbd>Shift</kbd> + clic borra, y <kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace.</li>
-          <li>Arrastra para girar la cámara y usa la rueda para acercarte. Cuando te guste, presiona <b>Exportar</b> y descarga tu imagen.</li>
-        </ol>
-        <figure class="shot narrow"><img src="img/bienvenida.webp" alt="Ventana de bienvenida con los ejemplos" loading="lazy" /><figcaption>La primera vez se abren los ejemplos. Al abrir uno se crea una copia para editarla sin miedo.</figcaption></figure>
-        <div class="note"><b>Todo se guarda solo.</b> Tus figuras viven en este navegador. Para pasarlas a otra compu, expórtalas como <b>Proyecto (.json)</b> e impórtalas allá.</div>
       </section>
 
       <!-- 2 -->
+      <section id="empezar">
+        <h2><span class="n">2</span>Al empezar</h2>
+        <p class="sub">La primera pantalla y cómo arrancar.</p>
+        <div class="split">
+          <figure class="shot"><img src="img/bienvenida.webp" alt="Mis figuras con la bienvenida: hacer el recorrido, ver la guía y ver ejemplos" loading="lazy" /></figure>
+          <div>
+            <p>La primera vez que abres CuboStudio (o si ya no tienes figuras) se abre <b>Mis figuras</b> con la bienvenida. Desde ahí puedes:</p>
+            <ul>
+              <li><b>Cerrar la ventana</b> para empezar con una figura en blanco.</li>
+              <li><b>Hacer el recorrido:</b> unos globitos te señalan cada parte de la pantalla, paso a paso. Toma un minuto.</li>
+              <li><b>Ver la guía:</b> esta página, con todo explicado.</li>
+              <li><b>Ver ejemplos:</b> figuras listas; al abrir una se crea una copia para que la explores y la edites sin miedo.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="note"><b>¿La cerraste?</b> El recorrido y esta guía siempre están en el botón <b>?</b> de arriba a la derecha. Y si borras todas tus figuras, la bienvenida vuelve a aparecer.</div>
+        <div class="tip"><b>Todo se guarda solo.</b> En cuanto pones la primera pieza, tu figura se guarda en este navegador y aparece en <b>Mis figuras</b>. Para pasarla a otra compu, expórtala como <b>Proyecto (.json)</b> e impórtala allá.</div>
+      </section>
+
+      <!-- 3 -->
       <section id="pantalla">
-        <h2><span class="n">2</span>La pantalla</h2>
+        <h2><span class="n">3</span>La pantalla</h2>
         <p class="sub">Todo lo que ves de un vistazo.</p>
         <figure class="shot"><img src="img/pantalla.webp" alt="Pantalla de CuboStudio con números" loading="lazy" /></figure>
         <ol class="legend">
@@ -221,7 +253,7 @@
           <li><b>La píldora.</b> Aparece junto a lo que seleccionas, con sus modos y acciones.</li>
           <li><b>Panel.</b> Colores, formas y escena. Muestra sólo lo que sirve para lo que estás haciendo.</li>
           <li><b>Contador.</b> Cuántos cubos tiene tu figura.</li>
-          <li><b>Mis figuras, Importar y Exportar.</b> Tu galería, abrir archivos y guardar imágenes o modelos 3D.</li>
+          <li><b>Mis figuras, Importar y Exportar.</b> Tu galería, abrir archivos y guardar imágenes o modelos 3D. A su lado, el botón <b>?</b>: atajos, esta guía y el recorrido.</li>
         </ol>
         <h3>La cámara</h3>
         <table>
@@ -235,134 +267,203 @@
         <div class="tip"><b>Tip:</b> las flechitas a los lados de la pantalla esconden la barra de herramientas o el panel, para tener más espacio.</div>
       </section>
 
-      <!-- 3 -->
+      <!-- 4 -->
       <section id="construir">
-        <h2><span class="n">3</span>Construir</h2>
-        <p class="sub">Poner, quitar y pintar piezas.</p>
-        <div class="split wide-left">
-          <table>
-            <tr><th>Herramienta</th><th>Tecla</th><th>Qué hace</th></tr>
-            <tr><td>Construir</td><td><kbd>B</kbd></td><td>Pone una pieza en el piso o sobre una cara.</td></tr>
-            <tr><td>Caja</td><td><kbd>O</kbd></td><td>Arrastra para llenar un área; la rueda da la altura.</td></tr>
-            <tr><td>Borrar</td><td><kbd>E</kbd></td><td>Quita la pieza.</td></tr>
-            <tr><td>Pintar</td><td><kbd>P</kbd></td><td>Clic, o mantén el clic y arrastra, para pintar de corrido.</td></tr>
-            <tr><td>Rellenar</td><td><kbd>K</kbd></td><td>Pinta todas las piezas conectadas del mismo color.</td></tr>
-            <tr><td>Gotero</td><td><kbd>I</kbd></td><td>Toma el color de una pieza.</td></tr>
-          </table>
-          <figure class="shot plain narrow" style="max-width:110px"><img src="img/herramientas.webp" alt="Barra de herramientas" loading="lazy" /></figure>
-        </div>
-        <div class="split">
-          <figure class="shot"><img src="img/construir.webp" alt="Vista previa azul de un cubo nuevo sobre otros" loading="lazy" /><figcaption>Antes del clic ves dónde va a quedar la pieza.</figcaption></figure>
-          <figure class="shot"><img src="img/caja.webp" alt="Caja arrastrada sobre el piso" loading="lazy" /><figcaption>Caja <kbd>O</kbd>: arrastra un rectángulo y gira la rueda para darle altura.</figcaption></figure>
-        </div>
-        <div class="cards">
-          <div class="card"><b><kbd>Shift</kbd> + clic</b><span>Borra, sin cambiar de herramienta.</span></div>
-          <div class="card"><b><kbd>Alt</kbd> + clic</b><span>Toma el color (gotero).</span></div>
-          <div class="card"><b><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + arrastrar</b><span>Construye o borra de corrido, en un solo paso de deshacer.</span></div>
+        <h2><span class="n">4</span>Construir</h2>
+        <p class="sub">Poner, quitar y pintar piezas, con su forma, opacidad y brillo.</p>
+        <h3>Herramientas</h3>
+        <p>Están en la barra de la izquierda; cada una tiene su tecla. Con <b>Construir</b> y <b>Caja</b> pones piezas, con <b>Borrar</b> las quitas, y con <b>Pintar</b>, <b>Rellenar</b> y <b>Gotero</b> trabajas el color. El color se elige en el panel de la derecha.</p>
+        <div class="tool-grid">
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-construir.gif" alt="Animación: Construir" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Construir <kbd>B</kbd></h4>
+            <p>Haz clic en el piso para poner una pieza, y sobre una cara para pegar otra encima o a un lado. Antes del clic ves dónde va a quedar.</p>
+            <ul class="variants">
+              <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + arrastrar: construye de corrido, en un solo paso de deshacer.</li>
+            </ul>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-caja.gif" alt="Animación: Caja" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Caja <kbd>O</kbd></h4>
+            <p>Arrastra un rectángulo sobre el piso y gira la rueda del mouse para darle altura. Al soltar, se llena de cubos.</p>
+            <ul class="variants">
+              <li><kbd>Shift</kbd> + arrastrar: borra todo lo que quede dentro de la caja.</li>
+            </ul>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-borrar.gif" alt="Animación: Borrar" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L13 19"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>Borrar <kbd>E</kbd></h4>
+            <p>Haz clic en una pieza para quitarla.</p>
+            <ul class="variants">
+              <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + arrastrar: borra de corrido, en un solo paso de deshacer.</li>
+              <li>Desde Construir, Caja, Pintar o Rellenar: <kbd>Shift</kbd> + clic borra sin cambiar de herramienta.</li>
+            </ul>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-pintar.gif" alt="Animación: Pintar" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08"/><path d="M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z"/></svg>Pintar <kbd>P</kbd></h4>
+            <p>Mantén el clic y arrastra sobre las piezas para pintarlas de corrido. Conservan su forma; sólo cambia el color.</p>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-rellenar.gif" alt="Animación: Rellenar" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z"/><path d="m5 2 5 5"/><path d="M2 13h15"/><path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z"/></svg>Rellenar <kbd>K</kbd></h4>
+            <p>Un clic pinta todas las piezas conectadas del mismo color, como una cubeta de pintura.</p>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/herr-gotero.gif" alt="Animación: Gotero" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>Gotero <kbd>I</kbd></h4>
+            <p>Haz clic en una pieza para tomar su color; después regresas solo a la herramienta que usabas.</p>
+            <ul class="variants">
+              <li>Desde Construir, Caja, Borrar, Pintar o Rellenar: <kbd>Alt</kbd> + clic toma el color sin cambiar de herramienta.</li>
+            </ul>
+          </article>
         </div>
 
-        <h3>Formas de pieza</h3>
-        <p>No todo tiene que ser cubo. En <b>Forma de la pieza</b> eliges cubo, esfera, cilindro, cono, pirámide o cuña. Las formas apuntan hacia afuera de la cara donde haces clic.</p>
-        <figure class="shot"><img src="img/formas.webp" alt="Cubo, esfera, cilindro, cono, pirámide y cuña" loading="lazy" /></figure>
+        <h3>Forma de la pieza</h3>
+        <p>No todo tiene que ser cubo.</p>
+        <p><b>Dónde:</b> en el panel de la derecha, abajo de los colores. Sale al elegir <b>Construir</b> o <b>Caja</b>, y al seleccionar piezas.</p>
+        <p><b>Cómo:</b> elige una forma y lo que construyas sale con ella. Con piezas seleccionadas, cambia la forma de lo seleccionado.</p>
+        <figure class="shot"><img src="img/formas-menu.gif" alt="Animación: se elige Construir, aparece Forma de la pieza, se elige esfera y luego cono" loading="lazy" /><figcaption>Construir → Forma de la pieza → clic en el piso o sobre una cara.</figcaption></figure>
+        <figure class="shot"><img src="img/formas.webp" alt="Cubo, esfera, cilindro, cono, pirámide y cuña" loading="lazy" /><figcaption>Cubo, esfera, cilindro, cono, pirámide y cuña.</figcaption></figure>
+        <table>
+          <tr><th>Forma</th><th>Ideal para</th><th>Límites</th></tr>
+          <tr><td>Cubo</td><td>Cuerpos, paredes, pisos: casi todo.</td><td>Ninguno: es la única que se <b>fusiona</b>, <b>deforma</b> y <b>extruye</b>.</td></tr>
+          <tr><td>Esfera</td><td>Ojos, narices, frutas, nubes.</td><td rowspan="2">No se fusionan, ni se deforman, ni se extruyen.</td></tr>
+          <tr><td>Cilindro</td><td>Troncos, patas, tubos, ruedas.</td></tr>
+          <tr><td>Cono</td><td>Picos, cuernos, sombreros.</td><td rowspan="3">Lo mismo que la esfera. Además apuntan hacia afuera de la cara donde haces clic; para cambiarles la dirección, gíralas con <b>Seleccionar</b>.</td></tr>
+          <tr><td>Pirámide</td><td>Techos y puntas.</td></tr>
+          <tr><td>Cuña</td><td>Rampas, techos de dos aguas, picos de ave.</td></tr>
+        </table>
+        <div class="note"><b>Todas</b> se pueden mover, girar, escalar, pintar y usar con Opacidad y Brilla.</div>
 
         <h3>Opacidad: agua y vidrio</h3>
         <div class="split">
           <div>
-            <p>Baja la <b>Opacidad</b> (10–100 %) para hacer agua, vidrio o hielo. Dentro de las piezas transparentes se puede seguir construyendo, por ejemplo peces dentro del agua.</p>
-            <p>Se aplica a lo que construyes, pintas o tienes seleccionado.</p>
+            <p><b>Dónde:</b> la barra <b>Opacidad</b>, en el panel de la derecha, debajo de los colores. Sale al construir, al pintar y al seleccionar piezas.</p>
+            <p><b>Cómo:</b> bájala (10–100 %) para hacer agua, vidrio o hielo. Se aplica a lo que construyes o pintas, o a lo que tienes seleccionado. Dentro de las piezas transparentes se puede seguir construyendo, por ejemplo peces dentro del agua.</p>
           </div>
-          <figure class="shot"><img src="img/opacidad.webp" alt="Isla con agua transparente" loading="lazy" /></figure>
+          <figure class="shot"><img src="img/opacidad-cubo.gif" alt="Animación: se baja la opacidad de un bloque azul y aparece un pez naranja adentro" loading="lazy" /></figure>
         </div>
+        <figure class="shot narrow" style="max-width:440px"><img src="img/opacidad.webp" alt="Isla con agua transparente" loading="lazy" /><figcaption>En la isla, el agua es un bloque con poca opacidad.</figcaption></figure>
 
         <h3>Brilla: piezas que dan luz</h3>
         <div class="split">
-          <figure class="shot"><img src="img/brilla.webp" alt="Calavera con ojos rojos brillantes" loading="lazy" /></figure>
           <div>
-            <p>Marca <b>Brilla</b> y la pieza se ve en su color pleno e <b>ilumina lo que tiene cerca</b> con luz de su color: lámparas, fuego, lava u ojos encendidos.</p>
-            <p>Luce mucho más con la luz de <b>Noche</b> (ver <a href="#escena">Escena y luz</a>).</p>
+            <p><b>Dónde:</b> la casilla <b>Brilla</b>, justo debajo de Opacidad.</p>
+            <p><b>Cómo:</b> márcala y la pieza se ve en su color pleno e <b>ilumina lo que tiene cerca</b> con luz de su color: lámparas, fuego, lava u ojos encendidos. Como la opacidad, se aplica a lo que construyes o a lo que tienes seleccionado.</p>
           </div>
+          <figure class="shot"><img src="img/brilla-ojos.gif" alt="Animación: se seleccionan los ojos de la calavera y al marcar Brilla se encienden en rojo" loading="lazy" /></figure>
         </div>
-        <div class="tip"><b>Tip:</b> si construyes sobre una pieza aplastada o desplazada, el cubo nuevo queda pegado a su cara real, sin dejar hueco.</div>
-      </section>
-
-      <!-- 4 -->
-      <section id="editar">
-        <h2><span class="n">4</span>Seleccionar y editar</h2>
-        <p class="sub">Mover, girar, escalar, copiar, agrupar y fusionar.</p>
-        <h3>Seleccionar</h3>
-        <ul>
-          <li><b>Seleccionar</b> <kbd>A</kbd>: clic en una pieza. <kbd>Shift</kbd> + clic suma o quita piezas. Clic en el piso deselecciona.</li>
-          <li><b>Selección rectangular</b> <kbd>R</kbd>: arrastra un rectángulo y se selecciona todo lo que quede dentro, también lo de atrás.</li>
-          <li>Al seleccionar, las piezas se resaltan en azul <b>con su forma real</b>.</li>
-        </ul>
-        <figure class="shot"><img src="img/rectangulo.webp" alt="Rectángulo de selección sobre el gato" loading="lazy" /></figure>
-
-        <h3>La píldora</h3>
-        <p>Al seleccionar aparece una barrita flotante con todo lo que puedes hacer:</p>
-        <figure class="shot plain narrow" style="max-width:520px"><img src="img/pildora.webp" alt="Píldora de selección" loading="lazy" /></figure>
-        <table>
-          <tr><th>Botón</th><th>Para qué</th></tr>
-          <tr><td>Sólo seleccionar</td><td>Sin flechas ni manijas: junta varias piezas sin que nada estorbe.</td></tr>
-          <tr><td>Mover</td><td>Flechas X / Y / Z, en pasos de 0.1.</td></tr>
-          <tr><td>Girar</td><td>Aros de 90°.</td></tr>
-          <tr><td>Escalar</td><td>Manijas en las caras (crece hacia ese lado) y esquinas amarillas (crece parejo).</td></tr>
-          <tr><td>Deformar · Extruir</td><td>Cambiar la forma de una cara o sacar piezas nuevas (sección <a href="#deformar">5</a>).</td></tr>
-          <tr><td>Agrupar · Fusionar · Duplicar · Copiar · Eliminar</td><td>Las acciones sobre lo seleccionado.</td></tr>
-        </table>
-        <figure class="shot plain"><img src="img/mover-girar-escalar.webp" alt="Gizmo de Mover, Girar y Escalar" loading="lazy" /></figure>
-
-        <h3>Imanes y topes</h3>
-        <ul>
-          <li><b>Escalar:</b> el tamaño se pega un momento en los números enteros (1, 2, 3…), y las manijas dan un saltito. Si sigues jalando, se suelta.</li>
-          <li><b>Mover:</b> se pega al alinear con la cuadrícula y al tocar otra pieza.</li>
-          <li>Nada se sale de la cuadrícula: al mover o escalar, se frena en la orilla.</li>
-        </ul>
-
-        <h3>Copiar, pegar y duplicar</h3>
-        <p><kbd>Ctrl</kbd> + <kbd>C</kbd> / <kbd>V</kbd> copia y pega, también entre figuras distintas. <kbd>Ctrl</kbd> + <kbd>D</kbd> duplica al instante. Lo pegado queda seleccionado para acomodarlo.</p>
-
-        <h3>Grupos</h3>
-        <div class="split">
-          <div>
-            <p><b>Agrupar</b> <kbd>Ctrl</kbd> + <kbd>G</kbd> une varias piezas: un clic en cualquiera selecciona el grupo completo, y al pasar el mouse se resalta todo.</p>
-            <p>Para tomar una sola pieza de un grupo, usa <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic. <b>Desagrupar</b> es <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd>.</p>
-          </div>
-          <figure class="shot"><img src="img/grupo.webp" alt="Árbol agrupado resaltado al pasar el mouse" loading="lazy" /></figure>
-        </div>
-
-        <h3>Fusionar y Separar</h3>
-        <p><b>Fusionar</b> <kbd>Ctrl</kbd> + <kbd>J</kbd> une cubos <b>de un solo color</b> en una sola pieza: un bloque, o una forma como L, E o T, con orillas limpias. <b>Separar</b> <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>J</kbd> la regresa a cubos sueltos.</p>
-        <figure class="shot plain"><img src="img/fusionar.webp" alt="Cinco cubos antes y una pieza en L después de fusionar" loading="lazy" /></figure>
+        <div class="tip"><b>Tip:</b> luce mucho más con la luz de <b>Noche</b> (ver <a href="#escena">Escena y luz</a>).</div>
       </section>
 
       <!-- 5 -->
-      <section id="deformar">
-        <h2><span class="n">5</span>Deformar y Extruir</h2>
-        <p class="sub">Rampas, techos, pirámides… y sacar piezas nuevas de una cara.</p>
-        <h3>Deformar</h3>
+      <section id="editar">
+        <h2><span class="n">5</span>Seleccionar y editar</h2>
+        <p class="sub">Mover, girar, escalar, agrupar, fusionar, deformar y extruir.</p>
+        <h3>Herramientas de selección</h3>
+        <p>Están en la barra de la izquierda, arriba de todo. Hay dos formas de seleccionar. Con <b>Seleccionar</b> eliges pieza por pieza con clics; con <b>Selección rectangular</b> arrastras un rectángulo y tomas muchas de golpe, también las que quedan atrás. Lo seleccionado se resalta en azul <b>con su forma real</b>, y un clic en el piso deselecciona.</p>
+        <div class="tool-grid">
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-seleccionar.gif" alt="Animación: clic y Shift + clic para seleccionar" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg>Seleccionar <kbd>A</kbd></h4>
+            <p>Un clic elige una pieza. Un clic en el piso deselecciona.</p>
+            <ul class="variants">
+              <li><kbd>Shift</kbd> + clic: suma o quita piezas.</li>
+              <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic: toma una sola pieza de un grupo.</li>
+            </ul>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-rectangulo.gif" alt="Animación: selección con rectángulo" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M10 3h4M10 21h4M3 10v4M21 10v4"/></svg>Selección rectangular <kbd>R</kbd></h4>
+            <p>Arrastra y se selecciona todo lo que quede dentro, también lo de atrás.</p>
+            <ul class="variants">
+              <li><kbd>Shift</kbd> + arrastrar: suma a lo que ya tenías.</li>
+            </ul>
+          </article>
+        </div>
+
+        <h3>La píldora</h3>
+        <p><b>Dónde:</b> al seleccionar, aparece una barrita flotante debajo de lo seleccionado.</p>
+        <p><b>Cómo:</b> elige un modo (mover, girar, escalar…) o una acción. Esto hace cada botón:</p>
+        <figure class="shot plain narrow" style="max-width:520px"><img src="img/pildora.webp" alt="Píldora de selección" loading="lazy" /></figure>
+        <table>
+          <tr><th>Botón</th><th>Para qué</th></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l7.07 17 2.51-7.39L21 11.07z"/></svg>Sólo seleccionar</td><td>Sin flechas ni manijas: junta varias piezas sin que nada estorbe.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M2 12h20"/><path d="m15 19-3 3-3-3M19 9l3 3-3 3M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>Mover</td><td>Flechas X / Y / Z, en pasos de 0.1.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>Girar</td><td>Aros de 90°.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 9 15"/><path d="M15 3h6v6"/><rect x="3" y="11" width="10" height="10" rx="1"/></svg>Escalar</td><td>Manijas en las caras (crece hacia ese lado) y esquinas amarillas (crece parejo).</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5h8l5 14H3z"/><path d="M8 5 3 19M16 5l5 14" opacity=".35"/></svg>Deformar · <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="14" width="16" height="7" rx="1"/><path d="M12 11V3M8 7l4-4 4 4"/></svg>Extruir</td><td>Cambiar la forma de una cara o sacar piezas nuevas (más abajo).</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M3 14v5a2 2 0 0 0 2 2h5M21 10V5a2 2 0 0 0-2-2h-5" stroke-dasharray="2 2"/></svg>Agrupar · <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M11 7h6v6M7 11v6h6"/></svg>Fusionar</td><td>Unir piezas para seleccionarlas juntas, o volverlas una sola.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/><path d="M15 12v6M12 15h6"/></svg>Duplicar · <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copiar · <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Eliminar</td><td>Ver <a href="#imanes">Imanes, copiar y pegar</a>.</td></tr>
+        </table>
+        <div class="tool-grid three">
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-mover.gif" alt="Animación: mover con la flecha" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M2 12h20"/><path d="m15 19-3 3-3-3M19 9l3 3-3 3M5 9l-3 3 3 3M9 5l3-3 3 3"/></svg>Mover</h4>
+            <p>Jala una flecha para mover en ese eje, en pasos de 0.1.</p>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-girar.gif" alt="Animación: girar con el aro" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>Girar</h4>
+            <p>Jala un aro para girar 90° sobre ese eje.</p>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-escalar.gif" alt="Animación: escalar desde una cara" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3 9 15"/><path d="M15 3h6v6"/><rect x="3" y="11" width="10" height="10" rx="1"/></svg>Escalar</h4>
+            <p>Jala la manija de una cara para crecer hacia ese lado, o una esquina amarilla para crecer parejo.</p>
+          </article>
+        </div>
+        <div class="tool-grid">
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-grupo.gif" alt="Animación: el grupo se resalta al pasar el mouse y se selecciona con un clic" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="M3 14v5a2 2 0 0 0 2 2h5M21 10V5a2 2 0 0 0-2-2h-5" stroke-dasharray="2 2"/></svg>Agrupar <kbd>Ctrl</kbd> + <kbd>G</kbd></h4>
+            <p>Une varias piezas: un clic en cualquiera selecciona el grupo completo, y al pasar el mouse se resalta todo.</p>
+            <ul class="variants">
+              <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic: toma una sola pieza del grupo.</li>
+              <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><path d="m14 3 7 7M21 3l-7 7"/></svg>Desagrupar: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>G</kbd>.</li>
+            </ul>
+          </article>
+          <article class="tool-card">
+            <figure class="shot"><img src="img/sel-fusionar.gif" alt="Animación: se seleccionan cinco cubos y se fusionan en una L" loading="lazy" /></figure>
+            <h4><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M11 7h6v6M7 11v6h6"/></svg>Fusionar <kbd>Ctrl</kbd> + <kbd>J</kbd></h4>
+            <p>Une cubos <b>de un solo color</b> en una sola pieza: un bloque, o una forma como L, E o T, con orillas limpias.</p>
+            <ul class="variants">
+              <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/><path d="M14 4h6v6M10 20H4v-6" stroke-dasharray="2 2"/></svg>Separar: <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>J</kbd> la regresa a cubos sueltos.</li>
+            </ul>
+          </article>
+        </div>
+
+        <h3 id="deformar"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5h8l5 14H3z"/><path d="M8 5 3 19M16 5l5 14" opacity=".35"/></svg>Deformar</h3>
+        <p>Rampas, techos, pirámides… a partir de un cubo o bloque.</p>
         <div class="split">
-          <figure class="shot"><img src="img/deformar.gif" alt="Animación: se achica un lado de la cara de arriba y luego se recorre" loading="lazy" /></figure>
           <div>
+            <p><b>Dónde:</b> en la píldora, con <b>un</b> cubo o bloque seleccionado.</p>
             <ol class="steps">
-              <li>Selecciona <b>un</b> cubo o bloque y elige <b>Deformar</b> en la píldora.</li>
+              <li>Selecciona el cubo o bloque y elige <b>Deformar</b> en la píldora.</li>
               <li>Elige la cara con los <b>cuadritos blancos</b>.</li>
               <li>Jala una <b>manija naranja</b> para achicar o agrandar ese lado, o la <b>azul</b> del centro para inclinar la cara.</li>
             </ol>
           </div>
+          <figure class="shot"><img src="img/deformar.gif" alt="Animación: se achica un lado de la cara de arriba y luego se recorre" loading="lazy" /></figure>
         </div>
         <figure class="shot"><img src="img/deformar-formas.webp" alt="Techo, pirámide, rampa, pieza inclinada y embudo" loading="lazy" /><figcaption>Techo, pirámide, rampa, pieza inclinada y embudo: todo sale de un bloque.</figcaption></figure>
         <ul>
           <li><b>Imán:</b> al tamaño original, al lado recto, a la mitad, al filo (ancho 0), a 45° y al centro.</li>
-          <li><b>Enderezar</b> (en la píldora) regresa la pieza a caja.</li>
+          <li><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M4 9h16M9 4v16" opacity=".35"/></svg><b>Enderezar</b> (en la píldora) regresa la pieza a caja.</li>
           <li>La deformación se conserva al mover, girar, escalar, copiar y con Espejo.</li>
         </ul>
 
-        <h3>Extruir</h3>
+        <h3 id="extruir"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="14" width="16" height="7" rx="1"/><path d="M12 11V3M8 7l4-4 4 4"/></svg>Extruir</h3>
+        <p>Sacar piezas nuevas de una cara: cuellos, patas, ramas.</p>
         <div class="split">
           <div>
-            <p>Elige <b>Extruir</b> en la píldora y aparecen <b>cuadritos morados</b> en las 6 caras.</p>
-            <p><b>Jala directo</b> el de la cara que quieras, como al escalar, y sale una <b>pieza nueva</b> del tamaño y forma exactos de esa cara, del mismo color.</p>
-            <p>Al soltar, la pieza nueva queda seleccionada: sigue extruyendo tramo por tramo para sacar cuellos, patas o ramas.</p>
+            <p><b>Dónde:</b> en la píldora, con <b>un</b> cubo o bloque seleccionado.</p>
+            <ol class="steps">
+              <li>Selecciona el cubo o bloque y elige <b>Extruir</b> en la píldora: aparecen <b>cuadritos morados</b> en las 6 caras.</li>
+              <li><b>Jala directo</b> el de la cara que quieras, como al escalar. Sale una <b>pieza nueva</b> del tamaño y forma exactos de esa cara, del mismo color.</li>
+              <li>Al soltar, la pieza nueva queda seleccionada: sigue extruyendo tramo por tramo.</li>
+            </ol>
           </div>
           <figure class="shot"><img src="img/extruir.gif" alt="Animación: se extruyen tramos hacia arriba y hacia un lado" loading="lazy" /></figure>
         </div>
@@ -370,78 +471,203 @@
       </section>
 
       <!-- 6 -->
+      <section id="imanes">
+        <h2><span class="n">6</span>Imanes, copiar y pegar</h2>
+        <p class="sub">Ayudas para acomodar con precisión y repetir piezas.</p>
+        <h3>Imanes y topes</h3>
+        <ul>
+          <li><b>Escalar:</b> el tamaño se pega un momento en los números enteros (1, 2, 3…), y las manijas dan un saltito. Si sigues jalando, se suelta.</li>
+          <li><b>Mover y escalar:</b> se pega al alinear con la cuadrícula y al tocar otra pieza.</li>
+          <li><b>Topes:</b> nada se sale de la cuadrícula; al mover o escalar, se frena en la orilla. Una pieza tampoco puede ser más grande que la cuadrícula.</li>
+          <li><b>Pegado al construir:</b> si construyes sobre una pieza aplastada o desplazada, el cubo nuevo queda pegado a su cara real, sin dejar hueco.</li>
+        </ul>
+
+        <h3>Copiar, pegar y duplicar</h3>
+        <table>
+          <tr><th>Atajo</th><th>Qué hace</th></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg><kbd>Ctrl</kbd> + <kbd>C</kbd></td><td>Copia lo seleccionado.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg><kbd>Ctrl</kbd> + <kbd>V</kbd></td><td>Pega, también en otra figura. Lo pegado queda seleccionado para acomodarlo.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/><path d="M15 12v6M12 15h6"/></svg><kbd>Ctrl</kbd> + <kbd>D</kbd></td><td>Duplica al instante; la copia queda seleccionada para acomodarla.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg><kbd>Supr</kbd> / <kbd>⌫</kbd></td><td>Elimina lo seleccionado.</td></tr>
+        </table>
+      </section>
+
+      <!-- 7 -->
       <section id="calcomanias">
-        <h2><span class="n">6</span>Calcomanías</h2>
+        <h2><span class="n">7</span>Calcomanías</h2>
         <p class="sub">Ojos, bocas, mejillas y más, sin construirlos cubo por cubo.</p>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"/><path d="M15 3v4a2 2 0 0 0 2 2h4"/><path d="M8 13h.01M16 13h.01"/><path d="M10 16s.8 1 2 1c1.3 0 2-1 2-1"/></svg>Calcomanía <kbd>S</kbd></h3>
+        <p><b>Dónde:</b> la herramienta Calcomanía, en la barra de la izquierda. Los diseños salen en el panel de la derecha.</p>
+        <p><b>Cómo:</b> elige un diseño y un color, y haz clic en la cara de una pieza.</p>
         <figure class="shot"><img src="img/calcomanias.webp" alt="Herramienta de calcomanías con el panel de diseños" loading="lazy" /></figure>
         <ul>
-          <li>Con <b>Calcomanía</b> <kbd>S</kbd>, elige un diseño en el panel y haz clic en una cara. Se pega con el color actual.</li>
           <li>Haz clic sobre una calcomanía ya pegada para cambiarle diseño y color.</li>
           <li>Con <b>Seleccionar</b> la mueves, la agrandas con Escalar o la borras con <kbd>Supr</kbd>.</li>
           <li>Viajan con su pieza: si mueves o giras la pieza, la calcomanía va con ella.</li>
         </ul>
       </section>
 
-      <!-- 7 -->
+      <!-- 8 -->
       <section id="ayudas">
-        <h2><span class="n">7</span>Ayudas para modelar</h2>
-        <h3>Espejo <kbd>M</kbd></h3>
+        <h2><span class="n">8</span>Ayudas para modelar</h2>
+        <p class="sub">Botones de la barra de la izquierda que se prenden y se apagan. No cambian tus piezas: te ayudan a construir.</p>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20v2M12 14v2M12 8v2M12 2v2"/></svg>Espejo <kbd>M</kbd></h3>
         <div class="split">
           <div>
-            <p>Todo lo que construyes, pintas o borras se repite del otro lado: perfecto para personajes simétricos.</p>
+            <p><b>Cómo:</b> préndelo y todo lo que construyes, pintas o borras se repite del otro lado: perfecto para personajes simétricos.</p>
             <p>Además, cada pieza tiene su <b>pareja</b> del otro lado, que se resalta en azul claro y cambia con ella. Al mover a los lados va <b>al revés</b>; arriba, abajo, adelante y atrás, igual.</p>
           </div>
           <figure class="shot"><img src="img/espejo.gif" alt="Animación: al mover una pieza a la derecha, su pareja se mueve a la izquierda" loading="lazy" /></figure>
         </div>
-        <h3>Marcar orillas <kbd>L</kbd></h3>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h18M12 3v18"/></svg>Marcar orillas <kbd>L</kbd></h3>
         <div class="split">
+          <div>
+            <p><b>Cómo:</b> préndelo y se dibuja el contorno de cada pieza para distinguirlas; muy útil con orillas rectas.</p>
+            <p>Sólo se ve mientras modelas: <b>no sale al exportar</b>.</p>
+          </div>
           <figure class="shot"><img src="img/marcar-orillas.webp" alt="Gato con el contorno de cada cubo marcado" loading="lazy" /></figure>
-          <p>Dibuja el contorno de cada pieza para distinguirlas, muy útil con orillas rectas. Sólo se ve mientras modelas: <b>no sale al exportar</b>.</p>
         </div>
-        <h3>Espacio 3D <kbd>V</kbd></h3>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>Espacio 3D <kbd>V</kbd></h3>
         <div class="split">
-          <p>Muestra un plano para poner <b>cubos flotantes</b>, sin nada debajo. Con <kbd>Q</kbd> / <kbd>W</kbd> bajas o subes de capa, y en la barra de abajo eliges si el plano va horizontal, de frente o de lado.</p>
-          <figure class="shot"><img src="img/espacio3d.webp" alt="Plano del espacio 3D sobre unos cubos" loading="lazy" /></figure>
+          <div>
+            <p><b>Cómo:</b> préndelo y aparece un plano para poner <b>cubos flotantes</b>, sin nada debajo.</p>
+            <ul>
+              <li><kbd>Q</kbd> / <kbd>W</kbd> bajan o suben el plano de capa.</li>
+              <li>En la barra de abajo eliges si el plano va horizontal, de frente o de lado.</li>
+            </ul>
+          </div>
+          <figure class="shot"><img src="img/espacio3d.gif" alt="Animación: se activa el espacio 3D, se sube de capa y se ponen cubos flotantes" loading="lazy" /></figure>
         </div>
-        <h3>Imágenes guía <kbd>H</kbd></h3>
-        <p>Pon imágenes de frente, lado y atrás para calcar, como los <i>image planes</i> de los programas 3D. Pueden ir al fondo o en cruz, con altura, posición, volteo y opacidad. Se guardan con la figura y no salen al exportar.</p>
-        <figure class="shot"><img src="img/guias.webp" alt="Imágenes guía de frente y lado detrás de la figura" loading="lazy" /></figure>
-      </section>
-
-      <!-- 8 -->
-      <section id="escena">
-        <h2><span class="n">8</span>Escena y luz</h2>
-        <p class="sub">Lo que es de toda la figura. Aparece en el panel cuando no estás creando ni editando piezas.</p>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.3-1.3a2.4 2.4 0 0 0-3.4 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>Imágenes guía <kbd>H</kbd></h3>
+        <p><b>Cómo:</b> pon imágenes de frente, lado y atrás para calcar, como los <i>image planes</i> de los programas 3D. Pueden ir al fondo o en cruz, con altura, posición, volteo y opacidad. <kbd>H</kbd> las muestra u oculta.</p>
+        <p>Se guardan con la figura y <b>no salen al exportar</b>.</p>
         <div class="split">
-          <figure class="shot plain narrow" style="max-width:300px"><img src="img/escena.webp" alt="Sección Escena del panel con Ajustar luz abierto" loading="lazy" /></figure>
-          <ul>
-            <li><b>Cuadrícula:</b> 8, 16, 24, 32, 48, 64 o 128 cubos por lado.</li>
-            <li><b>Fondo:</b> pradera, cielo, arena, nube o noche.</li>
-            <li><b>Luz:</b> ambientes listos y el botón <b>Ajustar</b>.</li>
-            <li><b>Orillas:</b> rectas, suaves o redondas.</li>
-            <li><b>Líneas del piso</b> y <b>Vaciar figura</b>.</li>
-          </ul>
+          <figure class="shot"><img src="img/guias-frente.webp" alt="Vista de frente con la imagen guía detrás" loading="lazy" /><figcaption>Vista <b>Frente</b> <kbd>2</kbd>: la imagen de frente queda detrás para calcar.</figcaption></figure>
+          <figure class="shot"><img src="img/guias-lado.webp" alt="Vista de lado con la imagen guía detrás" loading="lazy" /><figcaption>Vista <b>Lado</b> <kbd>3</kbd>: la imagen de lado, para el perfil.</figcaption></figure>
         </div>
-        <h3>Orillas</h3>
-        <figure class="shot plain"><img src="img/orillas.webp" alt="El gato con orillas rectas, suaves y redondas" loading="lazy" /><figcaption>Rectas para un look pixel; suaves (las de siempre); redondas tipo juguete. Se guardan con la figura.</figcaption></figure>
-        <h3>Ambientes de luz</h3>
-        <figure class="shot plain"><img src="img/luz.webp" alt="Voxel world de día, atardecer, noche y estudio" loading="lazy" /></figure>
-        <p>En <b>Ajustar</b> cambias el sol (color, intensidad, giro, altura, sombras y su suavidad), el ambiente y la fuerza de las piezas que brillan. La luz se guarda con cada figura y sale en las imágenes que exportas.</p>
-        <h3>Mover el sol <kbd>U</kbd></h3>
-        <figure class="shot"><img src="img/sol.gif" alt="Animación: el sol se arrastra por el cubo de trabajo y las sombras cambian" loading="lazy" /><figcaption>Arrastra el sol por los lados y el techo del cubo de trabajo: las sombras se mueven en vivo.</figcaption></figure>
       </section>
 
       <!-- 9 -->
+      <section id="escena">
+        <h2><span class="n">9</span>Escena y luz</h2>
+        <p class="sub">Lo que es de toda la figura: tamaño, fondo, luz y orillas.</p>
+        <div class="split">
+          <div>
+            <p><b>Dónde:</b> en el panel de la derecha, la sección <b>Escena</b>.</p>
+            <p><b>Cuándo sale:</b> cuando no estás creando ni editando piezas, es decir, con <b>Seleccionar</b> y nada seleccionado. Si eliges Construir o seleccionas algo, el panel cambia a Color y Forma de la pieza; presiona <kbd>Esc</kbd> o haz clic en el piso para regresar.</p>
+            <p>Todo lo de Escena <b>se guarda con cada figura</b>: al abrir otra, vuelve con su propio fondo, luz y orillas.</p>
+          </div>
+          <figure class="shot plain narrow" style="max-width:300px"><img src="img/escena.webp" alt="Sección Escena del panel con Ajustar luz abierto" loading="lazy" /></figure>
+        </div>
+        <table>
+          <tr><th>Opción</th><th>Qué hace</th></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Cuadrícula</td><td>Tamaño del espacio de trabajo.</td></tr>
+          <tr><td><span class="ico ico-swatch" style="--sw:#b5e08a" aria-hidden="true"></span>Fondo</td><td>Color del cielo detrás de la figura.</td></tr>
+          <tr><td><span class="ico ico-swatch" style="--sw:linear-gradient(135deg,#ffa45c,#4d6099)" aria-hidden="true"></span>Luz</td><td>Ambientes listos y <b>Ajustar</b> para afinar el sol.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>Orillas</td><td>Rectas, suaves o redondas.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Líneas del piso</td><td>Muestra u oculta las líneas del piso.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Vaciar figura</td><td>Quita todas las piezas.</td></tr>
+        </table>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Cuadrícula</h3>
+        <div class="split">
+          <div>
+            <p><b>Cómo:</b> elige 8, 16, 24, 32, 48, 64 o 128. Es el número de cubos por lado: de ancho, de fondo y de alto.</p>
+            <ul>
+              <li>Para <b>achicarla</b>, la figura tiene que caber en el nuevo tamaño; si no cabe, te avisa. Céntrala o quita lo que sobra.</li>
+              <li>También es el <b>tope</b>: nada se sale de la cuadrícula, y una pieza no puede ser más grande que ella.</li>
+              <li>Para figuras chicas, 16 o 24; para escenas grandes, 48 o más.</li>
+            </ul>
+          </div>
+          <figure class="shot"><img src="img/escena-cuadricula.gif" alt="Animación: se cambia la cuadrícula de 24 a 32 y 48, y el piso crece" loading="lazy" /></figure>
+        </div>
+
+        <h3><span class="ico ico-swatch" style="--sw:#b5e08a" aria-hidden="true"></span>Fondo</h3>
+        <div class="split">
+          <div>
+            <p><b>Cómo:</b> clic en el color de Fondo y elige <b>Pradera</b>, <b>Cielo</b>, <b>Arena</b>, <b>Nube</b> o <b>Noche</b>.</p>
+            <p>Sólo cambia el cielo detrás de la figura, no tus piezas. Sale en las imágenes que exportas con fondo de color.</p>
+            <p>Al elegir la luz de <b>Noche</b>, el fondo se pone de noche solo.</p>
+          </div>
+          <figure class="shot"><img src="img/escena-fondo.gif" alt="Animación: el fondo cambia a cielo, arena y pradera" loading="lazy" /></figure>
+        </div>
+
+        <h3><span class="ico ico-swatch" style="--sw:linear-gradient(135deg,#ffa45c,#4d6099)" aria-hidden="true"></span>Luz: ambientes</h3>
+        <div class="split">
+          <div>
+            <p><b>Cómo:</b> clic en el ambiente de Luz y elige uno listo:</p>
+            <table>
+              <tr><th>Ambiente</th><th>Cómo se ve</th></tr>
+              <tr><td>Día</td><td>Luz blanca y cálida, sombras claras. La de siempre.</td></tr>
+              <tr><td>Atardecer</td><td>Sol naranja y bajo, sombras largas.</td></tr>
+              <tr><td>Noche</td><td>Luz azul y tenue; las piezas que <b>brillan</b> lucen mucho.</td></tr>
+              <tr><td>Estudio</td><td>Luz blanca y pareja, como foto de producto.</td></tr>
+            </table>
+          </div>
+          <figure class="shot"><img src="img/escena-luz.gif" alt="Animación: la luz cambia a atardecer, noche y día" loading="lazy" /></figure>
+        </div>
+        <figure class="shot plain"><img src="img/luz.webp" alt="Voxel world de día, atardecer, noche y estudio" loading="lazy" /><figcaption>La misma figura de día, atardecer, noche y estudio.</figcaption></figure>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>Luz: Ajustar</h3>
+        <div class="split">
+          <div>
+            <p><b>Cómo:</b> clic en <b>Ajustar</b>, junto al ambiente. Se abre un recuadro con los controles finos. Al mover cualquiera, el ambiente pasa a <b>Personalizada</b>.</p>
+          </div>
+          <figure class="shot"><img src="img/escena-ajustar.gif" alt="Animación: se abre Ajustar y se mueven el giro y la altura del sol; las sombras cambian" loading="lazy" /></figure>
+        </div>
+        <table>
+          <tr><th>Control</th><th>Qué hace</th></tr>
+          <tr><td>Sol: color e intensidad</td><td>El color de la luz principal y qué tan fuerte es.</td></tr>
+          <tr><td>Sol: giro</td><td>De qué lado viene la luz (0–355°).</td></tr>
+          <tr><td>Sol: altura</td><td>Bajo da sombras largas; alto, cortas.</td></tr>
+          <tr><td>Sombras y suavidad</td><td>Prende o apaga las sombras, y qué tan difuminadas se ven.</td></tr>
+          <tr><td>Ambiente: color e intensidad</td><td>La luz de relleno que llega por todos lados, también a las partes en sombra.</td></tr>
+          <tr><td>Piezas que brillan: fuerza</td><td>Cuánto iluminan las piezas con <b>Brilla</b>.</td></tr>
+          <tr><td>Volver a la luz de día</td><td>Regresa todo a Día.</td></tr>
+        </table>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>Mover el sol <kbd>U</kbd></h3>
+        <div class="split">
+          <div>
+            <p><b>Dónde:</b> el botón del sol en la barra de la izquierda, o la tecla <kbd>U</kbd>.</p>
+            <p><b>Cómo:</b> aparece el sol sobre un cubo que rodea tu espacio de trabajo. <b>Arrástralo</b> por los lados y el techo, y las sombras se mueven en vivo. Es lo mismo que Giro y Altura en Ajustar, pero a mano: el panel se abre solo para que veas los valores.</p>
+          </div>
+          <figure class="shot"><img src="img/sol.gif" alt="Animación: el sol se arrastra por el cubo de trabajo y las sombras cambian" loading="lazy" /></figure>
+        </div>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>Orillas</h3>
+        <p><b>Cómo:</b> elige uno de los tres botones de Orillas. Cambia a todas las piezas de la figura y sale igual en lo que exportas.</p>
+        <figure class="shot plain"><img src="img/orillas.webp" alt="El gato con orillas rectas, suaves y redondas" loading="lazy" /></figure>
+        <table>
+          <tr><th>Orillas</th><th>Cómo se ven</th></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="0"/></svg>Rectas</td><td>Cubos cuadrados, pixel puro. Combínalas con <a href="#ayudas">Marcar orillas</a> para distinguir cada pieza.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>Suaves</td><td>Un bisel ligero. Las de siempre.</td></tr>
+          <tr><td><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="7"/></svg>Redondas</td><td>Esquinas muy redondeadas, tipo juguete.</td></tr>
+        </table>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>Líneas del piso</h3>
+        <p>Quítalas para ver la figura limpia, sin la cuadrícula del piso. No afectan lo que exportas.</p>
+
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>Vaciar figura</h3>
+        <p>Quita todas las piezas de golpe. Se deshace con <kbd>Ctrl</kbd> + <kbd>Z</kbd>.</p>
+      </section>
+
+      <!-- 10 -->
       <section id="figuras">
-        <h2><span class="n">9</span>Tus figuras y exportar</h2>
-        <h3>Mis figuras <kbd>G</kbd></h3>
+        <h2><span class="n">10</span>Tus figuras y exportar</h2>
+        <p class="sub">Tu galería, y cómo sacar tus figuras como imagen, modelo 3D o proyecto.</p>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Mis figuras <kbd>G</kbd></h3>
+        <p><b>Dónde:</b> el botón <b>Mis figuras</b>, arriba a la derecha.</p>
+        <p><b>Cómo:</b> haz clic en una figura para abrirla.</p>
         <figure class="shot"><img src="img/galeria.webp" alt="Galería de figuras guardadas" loading="lazy" /></figure>
         <ul>
           <li>Todas tus figuras con su miniatura, su luz y su fondo. Se guardan solas mientras trabajas.</li>
           <li>Duplica o elimina desde cada tarjeta. <b>Nueva vacía</b> empieza desde cero.</li>
           <li>La pestaña <b>Ejemplos</b> tiene figuras listas: al abrir una se crea una copia para editar.</li>
         </ul>
-        <h3>Exportar <kbd>Ctrl</kbd> + <kbd>E</kbd></h3>
+        <h3><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>Exportar <kbd>Ctrl</kbd> + <kbd>E</kbd></h3>
+        <p><b>Dónde:</b> el botón <b>Exportar</b>, arriba a la derecha.</p>
+        <p><b>Cómo:</b> elige el formato, mira la vista previa y descarga.</p>
         <figure class="shot"><img src="img/exportar.webp" alt="Ventana de exportar con vista previa en formato vertical" loading="lazy" /></figure>
         <table>
           <tr><th>Formato</th><th>Tamaño</th><th>Para</th></tr>
@@ -462,40 +688,12 @@
         </ul>
       </section>
 
-      <!-- 10 -->
-      <section id="atajos">
-        <h2><span class="n">10</span>Atajos de teclado</h2>
-        <p class="sub">En Mac usa <kbd>⌘</kbd> donde dice <kbd>Ctrl</kbd>. La lista también está en el botón <b>?</b> de la app.</p>
-        <table>
-          <tr><th>Tecla</th><th>Acción</th><th>Tecla</th><th>Acción</th></tr>
-          <tr><td><kbd>A</kbd></td><td>Seleccionar</td><td><kbd>R</kbd></td><td>Selección rectangular</td></tr>
-          <tr><td><kbd>B</kbd></td><td>Construir</td><td><kbd>O</kbd></td><td>Caja</td></tr>
-          <tr><td><kbd>E</kbd></td><td>Borrar</td><td><kbd>P</kbd></td><td>Pintar</td></tr>
-          <tr><td><kbd>K</kbd></td><td>Rellenar</td><td><kbd>I</kbd></td><td>Gotero</td></tr>
-          <tr><td><kbd>S</kbd></td><td>Calcomanía</td><td><kbd>M</kbd></td><td>Espejo</td></tr>
-          <tr><td><kbd>U</kbd></td><td>Mover el sol</td><td><kbd>L</kbd></td><td>Marcar orillas</td></tr>
-          <tr><td><kbd>V</kbd></td><td>Espacio 3D</td><td><kbd>Q</kbd> / <kbd>W</kbd></td><td>Bajar / subir capa</td></tr>
-          <tr><td><kbd>H</kbd></td><td>Mostrar / ocultar guías</td><td><kbd>G</kbd></td><td>Mis figuras</td></tr>
-          <tr><td><kbd>1</kbd> – <kbd>5</kbd></td><td>Vistas</td><td><kbd>F</kbd></td><td>Encuadrar</td></tr>
-          <tr><td><kbd>Ctrl</kbd> <kbd>Z</kbd></td><td>Deshacer</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>Z</kbd></td><td>Rehacer</td></tr>
-          <tr><td><kbd>Ctrl</kbd> <kbd>C</kbd> / <kbd>V</kbd></td><td>Copiar / pegar</td><td><kbd>Ctrl</kbd> <kbd>D</kbd></td><td>Duplicar</td></tr>
-          <tr><td><kbd>Ctrl</kbd> <kbd>G</kbd></td><td>Agrupar</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>G</kbd></td><td>Desagrupar</td></tr>
-          <tr><td><kbd>Ctrl</kbd> <kbd>J</kbd></td><td>Fusionar</td><td><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>J</kbd></td><td>Separar</td></tr>
-          <tr><td><kbd>Ctrl</kbd> <kbd>S</kbd></td><td>Guardar ahora</td><td><kbd>Ctrl</kbd> <kbd>E</kbd></td><td>Exportar</td></tr>
-          <tr><td><kbd>←</kbd><kbd>↑</kbd><kbd>→</kbd><kbd>↓</kbd></td><td>Mover la figura</td><td><kbd>RePág</kbd> / <kbd>AvPág</kbd></td><td>Subir / bajar la figura</td></tr>
-          <tr><td><kbd>Supr</kbd></td><td>Borrar lo seleccionado</td><td><kbd>Esc</kbd></td><td>Cerrar ventanas y menús</td></tr>
-        </table>
-        <div class="cards">
-          <div class="card"><b><kbd>Shift</kbd> + clic</b><span>Borrar (o sumar a la selección con el puntero).</span></div>
-          <div class="card"><b><kbd>Alt</kbd> + clic</b><span>Gotero desde cualquier herramienta.</span></div>
-          <div class="card"><b><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + clic</b><span>Una sola pieza dentro de un grupo.</span></div>
-        </div>
-      </section>
-
       <!-- 11 -->
       <section id="faq">
         <h2><span class="n">11</span>Preguntas y trucos</h2>
+        <p class="sub">Dudas frecuentes y trucos para sacarle más jugo.</p>
         <details class="faq"><summary>¿Dónde se guardan mis figuras?</summary><p>En el navegador que estás usando, en tu compu. No se suben a ningún lado. Si borras los datos del navegador o cambias de equipo, exporta antes tus figuras como <b>Proyecto (.json)</b>.</p></details>
+        <details class="faq"><summary>¿Dónde veo todos los atajos de teclado?</summary><p>En el botón <b>?</b> de arriba a la derecha de la app. En Mac usa <kbd>⌘</kbd> donde dice <kbd>Ctrl</kbd>.</p></details>
         <details class="faq"><summary>Me equivoqué, ¿cómo regreso?</summary><p><kbd>Ctrl</kbd> + <kbd>Z</kbd> deshace (hasta 300 pasos) y <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> rehace. Arrastrar un gizmo, un trazo de pintura o una deformación cuentan como un solo paso.</p></details>
         <details class="faq"><summary>¿Por qué no puedo fusionar unas piezas?</summary><p>Fusionar sólo une cubos y bloques <b>del mismo color</b> (y misma opacidad). Las esferas, conos y piezas deformadas no se fusionan.</p></details>
         <details class="faq"><summary>La cuadrícula no me deja hacerla más chica.</summary><p>La figura tiene que caber en el tamaño nuevo. Mueve la figura con las flechas del teclado o quita lo que sobra, y vuelve a intentarlo.</p></details>

@@ -232,7 +232,8 @@ export function renderStandalone(model, { size = 192, type = 'image/webp', quali
 
 /** Malla sólida sin caras ocultas, con colores por vértice. */
 /** include(pieza) elige qué piezas entran (por defecto, todas). */
-export function buildSolidMesh(model, include = () => true) {
+/** hides(pieza, valorVecino) decide si el vecino tapa la cara (por defecto, un cubo 1×1×1 sólido). */
+export function buildSolidMesh(model, include = () => true, { hides = null } = {}) {
   const positions = [];
   const normals = [];
   const colors = [];
@@ -274,7 +275,8 @@ export function buildSolidMesh(model, include = () => true) {
     }
 
     for (const f of FACES) {
-      if (isCube(keyOf(p[0] + f.n[0], p[1] + f.n[1], p[2] + f.n[2]))) continue;
+      const nk = keyOf(p[0] + f.n[0], p[1] + f.n[1], p[2] + f.n[2]);
+      if (hides ? hides(piece, model.voxels.get(nk)) : isCube(nk)) continue;
       const corner = (a, b) => [0, 1, 2].map((i) => p[i] + f.base[i] + f.u[i] * a + f.v[i] * b);
       const q = [corner(0, 0), corner(1, 0), corner(1, 1), corner(0, 1)];
       for (const idx of [0, 1, 2, 0, 2, 3]) {
@@ -342,6 +344,278 @@ export async function exportGLB(model, name = 'figura', lighting = null) {
     m.material.dispose();
   }
   return new Blob([buffer], { type: 'model/gltf-binary' });
+}
+
+/** Caja (en celdas) de cada pieza: la celda si es un cubo 1×1×1; si no, la de su geometría. */
+function pieceBoxes(model) {
+  const boxes = [];
+  const m = new THREE.Matrix4();
+  const box = new THREE.Box3();
+  for (const [k, value] of model.voxels) {
+    const p = parseKey(k);
+    const piece = parseVoxel(value);
+    if (piece.shape === 'cube' && isUnit(piece.size) && isZero(piece.offset)) {
+      boxes.push({ min: p, max: p.map((v) => v + 1) });
+      continue;
+    }
+    const g = pieceGeometry(piece);
+    if (!g.boundingBox) g.computeBoundingBox();
+    box.copy(g.boundingBox).applyMatrix4(pieceTransform(p, piece, m));
+    boxes.push({ min: box.min.toArray(), max: box.max.toArray() });
+  }
+  return boxes;
+}
+
+/**
+ * Revisión antes de imprimir: medidas en mm y piezas que flotan (grupos de piezas que no se
+ * tocan entre sí ni tocan la base de la figura).
+ */
+export function printCheck(model, mmPerCube) {
+  const boxes = pieceBoxes(model);
+  if (!boxes.length) return { size: [0, 0, 0], floating: 0, parts: 0, stickers: model.stickers.size };
+  const min = [Infinity, Infinity, Infinity];
+  const max = [-Infinity, -Infinity, -Infinity];
+  for (const b of boxes) for (let i = 0; i < 3; i++) { min[i] = Math.min(min[i], b.min[i]); max[i] = Math.max(max[i], b.max[i]); }
+
+  // Unir piezas que se tocan, con las celdas que ocupan (y sus vecinas) como puente
+  const parent = boxes.map((_, i) => i);
+  const find = (i) => { while (parent[i] !== i) i = parent[i] = parent[parent[i]]; return i; };
+  const owner = new Map();
+  const eps = 1e-4;
+  boxes.forEach((b, i) => {
+    const lo = b.min.map((v) => Math.floor(v + eps));
+    const hi = b.max.map((v) => Math.ceil(v - eps) - 1);
+    for (let x = lo[0]; x <= hi[0]; x++) for (let y = lo[1]; y <= hi[1]; y++) for (let z = lo[2]; z <= hi[2]; z++) {
+      const k = `${x},${y},${z}`;
+      if (owner.has(k)) parent[find(owner.get(k))] = find(i);
+      else owner.set(k, i);
+    }
+  });
+  for (const [k, i] of owner) {
+    const [x, y, z] = k.split(',').map(Number);
+    for (const n of [`${x + 1},${y},${z}`, `${x},${y + 1},${z}`, `${x},${y},${z + 1}`]) {
+      const j = owner.get(n);
+      if (j !== undefined) parent[find(j)] = find(i);
+    }
+  }
+  // Un grupo flota si ninguna de sus piezas llega a la base
+  const grounded = new Set();
+  const roots = new Set();
+  boxes.forEach((b, i) => { const r = find(i); roots.add(r); if (b.min[1] <= min[1] + eps) grounded.add(r); });
+  return {
+    size: [0, 1, 2].map((i) => (max[i] - min[i]) * mmPerCube), // ancho (x), alto (y), fondo (z)
+    parts: roots.size,
+    floating: roots.size - grounded.size,
+    stickers: model.stickers.size,
+  };
+}
+
+/**
+ * Archivo .stl para impresora 3D (un solo color): la figura en milímetros, con la base sobre la
+ * cama (Z hacia arriba) y la esquina en el origen.
+ */
+const isUnitCube = (v) => {
+  if (!v) return false;
+  const p = parseVoxel(v);
+  return p.shape === 'cube' && isUnit(p.size) && isZero(p.offset);
+};
+
+/** Pasa la figura a coordenadas de impresora: mm, Z hacia arriba y la esquina en el origen. */
+function toPrinterSpace(geos, mmPerCube) {
+  const box = new THREE.Box3();
+  for (const g of geos) {
+    // Y (arriba en la app) → Z (arriba en la impresora); el frente de la figura queda hacia el
+    // frente de la cama (-Y). Es un giro, no un espejo: la figura no se invierte.
+    g.rotateX(Math.PI / 2);
+    g.scale(mmPerCube, mmPerCube, mmPerCube);
+    g.computeBoundingBox();
+    box.union(g.boundingBox);
+  }
+  for (const g of geos) g.translate(-box.min.x, -box.min.y, -box.min.z);
+}
+
+export async function exportSTL(model, mmPerCube = 5) {
+  const mesh = buildSolidMesh(model, () => true, { hides: (_, v) => isUnitCube(v) });
+  const geo = mesh.geometry;
+  geo.deleteAttribute('color');
+  toPrinterSpace([geo], mmPerCube);
+  const { STLExporter } = await import('three/addons/exporters/STLExporter.js');
+  const data = new STLExporter().parse(mesh, { binary: true });
+  geo.dispose();
+  mesh.material.dispose();
+  return new Blob([data], { type: 'model/stl' });
+}
+
+/** Distancia entre colores, aproximada a la vista ("redmean"). */
+function colorDistance(a, b) {
+  const ca = new THREE.Color(a); const cb = new THREE.Color(b);
+  const r = ((ca.r + cb.r) / 2) * 255;
+  const dr = (ca.r - cb.r) * 255; const dg = (ca.g - cb.g) * 255; const db = (ca.b - cb.b) * 255;
+  return Math.sqrt((2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db);
+}
+
+/**
+ * Colores para imprimir: los de la figura con cuántas piezas usan cada uno, y si hay más que
+ * maxColors, se eligen los maxColors más representativos de la paleta (por uso y por qué tan
+ * distintos son) y cada color se cambia por el más parecido de ésos.
+ * Devuelve { colors: [{ color, count }], map: Map(colorOriginal → colorFinal), total }.
+ */
+export function printColors(model, maxColors = Infinity) {
+  // Peso de cada color: el volumen que ocupa (una pieza grande pesa más que un cubito)
+  const stats = new Map();
+  for (const v of model.voxels.values()) {
+    const p = parseVoxel(v);
+    const c = p.color.toLowerCase();
+    const st = stats.get(c) ?? { count: 0, volume: 0 };
+    st.count += 1;
+    st.volume += p.size[0] * p.size[1] * p.size[2];
+    stats.set(c, st);
+  }
+  const palette = [...stats].map(([color, st]) => ({ color, ...st }));
+  const total = palette.length;
+  const k = Math.max(1, Math.min(maxColors, total));
+  const dist = palette.map((a) => palette.map((b) => colorDistance(a.color, b.color)));
+  const nearest = (centers) => palette.map((_, i) => centers.reduce((best, c) => (dist[i][c] < dist[i][best] ? c : best), centers[0]));
+
+  // Inicio: el más usado, y después el que más "falta" (uso × distancia al elegido más cercano)
+  const byUse = palette.map((_, i) => i).sort((a, b) => palette[b].volume - palette[a].volume);
+  let centers = [byUse[0]];
+  while (centers.length < k) {
+    let best = -1; let score = -1;
+    palette.forEach((p, i) => {
+      if (centers.includes(i)) return;
+      const d = Math.min(...centers.map((c) => dist[i][c]));
+      if (p.volume * d > score) { score = p.volume * d; best = i; }
+    });
+    centers.push(best);
+  }
+  // Ajuste: en cada grupo, el centro es el color que menos cambia a los demás (pesado por uso)
+  for (let iter = 0; iter < 20; iter++) {
+    const owner = nearest(centers);
+    const next = centers.map((c) => {
+      const members = palette.map((_, i) => i).filter((i) => owner[i] === c);
+      return members.reduce((best, m) => {
+        const cost = (x) => members.reduce((sum, i) => sum + palette[i].volume * dist[i][x], 0);
+        return cost(m) < cost(best) ? m : best;
+      }, c);
+    });
+    if (next.every((c, i) => c === centers[i])) break;
+    centers = next;
+  }
+  const owner = nearest(centers);
+  const map = new Map(palette.map((p, i) => [p.color, palette[owner[i]].color]));
+  const colors = centers
+    .map((c) => {
+      const mine = palette.filter((_, i) => owner[i] === c);
+      return { color: palette[c].color, count: mine.reduce((n, p) => n + p.count, 0), volume: mine.reduce((n, p) => n + p.volume, 0) };
+    })
+    .sort((a, b) => b.volume - a.volume);
+  return { colors, map, total };
+}
+
+/** Malla con índices (vértices sin repetir), como la pide 3MF. */
+function indexedMesh(geo) {
+  const pos = geo.getAttribute('position');
+  const ids = new Map();
+  const vertices = [];
+  const triangles = [];
+  const vid = (i) => {
+    const x = +pos.getX(i).toFixed(4); const y = +pos.getY(i).toFixed(4); const z = +pos.getZ(i).toFixed(4);
+    const k = `${x},${y},${z}`;
+    let id = ids.get(k);
+    if (id === undefined) { id = vertices.length; ids.set(k, id); vertices.push([x, y, z]); }
+    return id;
+  };
+  for (let i = 0; i < pos.count; i += 3) {
+    const t = [vid(i), vid(i + 1), vid(i + 2)];
+    if (t[0] !== t[1] && t[1] !== t[2] && t[0] !== t[2]) triangles.push(t);
+  }
+  return { vertices, triangles };
+}
+
+/** ZIP sin compresión (lo que necesita un .3mf), con su CRC-32. */
+function zipStore(files) {
+  const crcTable = new Uint32Array(256).map((_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc32 = (buf) => {
+    let c = 0xffffffff;
+    for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const enc = new TextEncoder();
+  const parts = [];
+  const central = [];
+  let offset = 0;
+  for (const [name, text] of files) {
+    const data = enc.encode(text);
+    const nameBytes = enc.encode(name);
+    const crc = crc32(data);
+    const local = new DataView(new ArrayBuffer(30));
+    local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true);
+    local.setUint32(14, crc, true); local.setUint32(18, data.length, true); local.setUint32(22, data.length, true);
+    local.setUint16(26, nameBytes.length, true);
+    parts.push(local, nameBytes, data);
+    const cen = new DataView(new ArrayBuffer(46));
+    cen.setUint32(0, 0x02014b50, true); cen.setUint16(4, 20, true); cen.setUint16(6, 20, true);
+    cen.setUint32(16, crc, true); cen.setUint32(20, data.length, true); cen.setUint32(24, data.length, true);
+    cen.setUint16(28, nameBytes.length, true); cen.setUint32(42, offset, true);
+    central.push(cen, nameBytes);
+    offset += 30 + nameBytes.length + data.length;
+  }
+  const size = central.reduce((n, p) => n + p.byteLength, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, size, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end], { type: 'model/3mf' });
+}
+
+/**
+ * Archivo .3mf a color para impresora 3D: una parte cerrada por color, todas juntas como una
+ * sola figura (en el programa de impresión se le asigna un filamento a cada parte).
+ */
+export function export3MF(model, mmPerCube = 5, maxColors = Infinity, name = 'figura') {
+  const { colors, map } = printColors(model, maxColors);
+  const finalColor = (p) => map.get(p.color.toLowerCase());
+  const geos = colors.map(({ color }) => {
+    const mesh = buildSolidMesh(model, (p) => finalColor(p) === color, {
+      // Sólo tapa un cubo de la misma parte: así cada parte queda cerrada
+      hides: (_, v) => isUnitCube(v) && finalColor(parseVoxel(v)) === color,
+    });
+    mesh.material.dispose();
+    return mesh.geometry;
+  });
+  toPrinterSpace(geos, mmPerCube);
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+  const objects = [];
+  geos.forEach((g, i) => {
+    const { vertices, triangles } = indexedMesh(g);
+    g.dispose();
+    objects.push(`<object id="${i + 2}" name="${esc(`${name} ${colors[i].color}`)}" type="model" pid="1" pindex="${i}"><mesh><vertices>`
+      + vertices.map(([x, y, z]) => `<vertex x="${x}" y="${y}" z="${z}"/>`).join('')
+      + '</vertices><triangles>'
+      + triangles.map(([a, b, c]) => `<triangle v1="${a}" v2="${b}" v3="${c}"/>`).join('')
+      + '</triangles></mesh></object>');
+  });
+  const groupId = colors.length + 2;
+  const model3d = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    + '<model unit="millimeter" xml:lang="es" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">'
+    + `<metadata name="Title">${esc(name)}</metadata><metadata name="Application">CuboStudio</metadata>`
+    + '<resources><basematerials id="1">'
+    + colors.map(({ color }) => `<base name="${color}" displaycolor="${color.toUpperCase()}FF"/>`).join('')
+    + '</basematerials>'
+    + objects.join('')
+    + `<object id="${groupId}" name="${esc(name)}" type="model"><components>`
+    + colors.map((_, i) => `<component objectid="${i + 2}"/>`).join('')
+    + '</components></object>'
+    + `</resources><build><item objectid="${groupId}"/></build></model>`;
+  return zipStore([
+    ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>'],
+    ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>'],
+    ['3D/3dmodel.model', model3d],
+  ]);
 }
 
 export function download(href, filename) {

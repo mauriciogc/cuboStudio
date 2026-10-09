@@ -680,3 +680,39 @@ kbd {
 .tour-spacer { flex: 1; }
 .tour-skip { border: 0; background: none; padding: 4px 0; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
 .tour-skip:hover { color: var(--text); text-decoration: underline; }
+
+/* ---------- imprimir en 3D (experimental) ---------- */
+.exp-badge {
+  display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px;
+  background: #fff1cc; color: #8a5a00; font-size: 11px; font-weight: 900; letter-spacing: 0.02em; text-transform: uppercase;
+}
+.modal > header .exp-badge { margin-left: 0; }
+.modal > header h2 { margin: 0; font-size: 19px; }
+.print-body { padding: 16px 20px 18px; overflow-y: auto; }
+.print-body h3 { margin: 18px 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.print-exp {
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px;
+  background: #fff6d6; border: 1px solid #f5d77a;
+}
+.print-exp p { margin: 0; font-size: 14px; font-weight: 600; }
+.print-exp svg { width: 22px; height: 22px; flex: none; color: #b07800; margin-top: 1px; }
+.print-config .field-label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 800; }
+.print-config .chips { grid-template-columns: repeat(3, 1fr); max-width: 320px; margin-bottom: 14px; }
+.print-config .chips.two { grid-template-columns: repeat(2, 1fr); }
+.print-config .field-label .muted { font-weight: 600; }
+.print-swatches { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 14px; }
+.print-swatches span {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 4px; border-radius: 999px;
+  background: var(--surface-2); font-size: 12px; font-weight: 800; color: var(--muted);
+}
+.print-swatches i { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, 0.15); }
+.print-facts { margin: 12px 0 0; display: grid; gap: 6px; font-size: 14px; }
+.print-facts > div { display: grid; grid-template-columns: 150px 1fr; gap: 10px; }
+.print-facts dt { color: var(--muted); font-weight: 700; }
+.print-facts dd { margin: 0; font-weight: 800; }
+.print-warn { margin: 0; padding-left: 20px; font-size: 14px; font-weight: 600; }
+.print-warn li { margin: 5px 0; }
+.print-warn li.alert { color: #a3410a; font-weight: 800; }
+.print-ok { margin: 18px 0 4px; font-weight: 700; }
+.print-actions { justify-content: flex-end; margin: 12px 0 0; }
+@media (max-width: 560px) { .print-facts > div { grid-template-columns: 1fr; gap: 0; } }

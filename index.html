@@ -301,10 +301,61 @@
           </div>
           <h3>Otros formatos</h3>
           <div class="row">
-            <button class="btn" id="btn-download-glb" data-icon="build"><span>Modelo 3D (.glb)</span></button>
-            <button class="btn" id="btn-download-json" data-icon="download"><span>Proyecto (.json)</span></button>
+            <button class="btn" id="btn-download-glb" data-icon="build" data-tip="Modelo 3D (.glb)" data-desc="Para Blender, visores 3D o tu sitio web. Lleva colores, luz y brillo; las calcomanías aún no." data-tip-pos="top" data-tip-delay="300"><span>Modelo 3D (.glb)</span></button>
+            <button class="btn" id="btn-download-json" data-icon="download" data-tip="Proyecto (.json)" data-desc="La figura completa (luz, fondo y orillas incluidos), para volver a abrirla con Importar o pasarla a otra compu." data-tip-pos="top" data-tip-delay="300"><span>Proyecto (.json)</span></button>
+            <button class="btn" id="btn-download-stl" data-icon="printer3d" data-tip="Imprimir en 3D" data-desc="Experimental. Un .stl de un solo color o un .3mf a color para tu impresora 3D. Antes de descargar ves la medida y los avisos." data-tip-pos="top" data-tip-delay="300"><span>Imprimir en 3D</span></button>
           </div>
-          <p class="muted small">El .glb abre en Blender, visores 3D o tu sitio web (sin calcomanías por ahora). El .json se puede volver a importar.</p>
+        </div>
+      </div>
+    </dialog>
+
+    <!-- Imprimir en 3D (STL): avisos y medidas antes de descargar -->
+    <dialog id="print-dialog" class="modal">
+      <header>
+        <h2>Imprimir en 3D</h2>
+        <span class="exp-badge">Experimental</span>
+        <span class="spacer"></span>
+        <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
+      </header>
+      <div class="print-body">
+        <div class="print-exp"><span data-icon="flask"></span><p><b>Esta función es experimental.</b> Aún no está probada en todas las impresoras ni programas, así que no podemos garantizar que la impresión salga bien. Revisa el modelo en tu programa de impresión antes de imprimir.</p></div>
+
+        <h3>Configuración</h3>
+        <div class="print-config">
+          <span class="field-label">Tipo</span>
+          <div class="chips two" id="print-type" role="radiogroup" aria-label="Tipo de archivo">
+            <button class="chip" role="radio" data-type="stl">Un color (.stl)</button>
+            <button class="chip" role="radio" data-type="3mf">A color (.3mf)</button>
+          </div>
+          <div id="print-color-opts" hidden>
+            <span class="field-label">Máximo de colores <span class="muted small">(cuántos filamentos tiene tu impresora)</span></span>
+            <div class="chips" id="print-max" role="radiogroup" aria-label="Máximo de colores">
+              <button class="chip" role="radio" data-max="0">Todos</button>
+              <button class="chip" role="radio" data-max="8">8</button>
+              <button class="chip" role="radio" data-max="4">4</button>
+            </div>
+            <div class="print-swatches" id="print-swatches"></div>
+          </div>
+          <span class="field-label">Tamaño de cada cubo</span>
+          <div class="chips" id="print-mm" role="radiogroup" aria-label="Tamaño de cada cubo">
+            <button class="chip" role="radio" data-mm="2">2 mm</button>
+            <button class="chip" role="radio" data-mm="5">5 mm</button>
+            <button class="chip" role="radio" data-mm="10">10 mm</button>
+          </div>
+          <dl class="print-facts">
+            <div><dt>Medida de la figura</dt><dd id="print-size"></dd></div>
+            <div><dt>Formato</dt><dd id="print-format"></dd></div>
+            <div><dt>Orientación</dt><dd>De pie sobre la cama, con el frente hacia ti</dd></div>
+          </dl>
+        </div>
+
+        <h3>Lo que puede pasar</h3>
+        <ul class="print-warn" id="print-warn"></ul>
+
+        <label class="field check print-ok"><input type="checkbox" id="print-agree" /><span>Entiendo que es experimental y quiero descargar el archivo.</span></label>
+        <div class="row print-actions">
+          <button class="btn" data-close>Cancelar</button>
+          <button class="btn primary" id="print-download" data-icon="download" disabled><span id="print-download-label">Descargar .stl</span></button>
         </div>
       </div>
     </dialog>

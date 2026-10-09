@@ -12,7 +12,7 @@ import { DeformTool } from './deform-tool.js';
 import { startTour } from './tour.js';
 import { BEVELS, setBevel } from './voxel-mesh.js';
 import {
-  renderModelImage, renderStandalone, renderFormatImage, IMAGE_FORMATS, exportGLB, download, dataURLToBlob, slugify, ISO_DIRECTION,
+  renderModelImage, renderStandalone, renderFormatImage, IMAGE_FORMATS, exportGLB, exportSTL, export3MF, printCheck, printColors, download, dataURLToBlob, slugify, ISO_DIRECTION,
 } from './exporter.js';
 import { PALETTE } from './palette.js';
 import { listExamples, loadExample, thumbUrl } from './examples.js';
@@ -1021,6 +1021,91 @@ $('#btn-download-glb').addEventListener('click', async () => {
   } catch (err) {
     console.error(err);
     toast('No se pudo exportar el modelo 3D', 'error');
+  }
+});
+// Imprimir en 3D (experimental): un color (.stl) o a color (.3mf). Antes de descargar se muestran
+// la medida, los colores y los avisos, y hay que confirmar que se entiende que no está garantizado.
+const PRINT_MM = [2, 5, 10];
+const printOpts = () => ({
+  mm: PRINT_MM.includes(prefs.printMm) ? prefs.printMm : 5,
+  type: prefs.printType === '3mf' ? '3mf' : 'stl',
+  max: [0, 4, 8].includes(prefs.printMax) ? prefs.printMax : 4,
+});
+const markChips = (sel, attr, value) => document.querySelectorAll(`${sel} [data-${attr}]`).forEach((b) => {
+  const on = b.dataset[attr] === String(value);
+  b.classList.toggle('active', on);
+  b.setAttribute('aria-checked', on);
+});
+function syncPrintDialog() {
+  const { mm, type, max } = printOpts();
+  const color = type === '3mf';
+  markChips('#print-type', 'type', type);
+  markChips('#print-mm', 'mm', mm);
+  markChips('#print-max', 'max', max);
+  $('#print-color-opts').hidden = !color;
+  $('#print-download-label').textContent = color ? 'Descargar .3mf' : 'Descargar .stl';
+  $('#print-format').textContent = color
+    ? '3MF a color: una parte por color, como una sola figura'
+    : 'STL, un solo color (sólo la forma)';
+  const info = printCheck(editor.model, mm);
+  const cm = (v) => `${(v / 10).toLocaleString('es', { maximumFractionDigits: 1 })} cm`;
+  const [w, h, d] = info.size;
+  $('#print-size').textContent = `${cm(w)} de ancho × ${cm(d)} de fondo × ${cm(h)} de alto`;
+  const warn = [];
+  if (color) {
+    const pc = printColors(editor.model, max || Infinity);
+    $('#print-max [data-max="0"]').textContent = `Todos (${pc.total})`;
+    $('#print-swatches').innerHTML = pc.colors.map((c) =>
+      `<span><i style="background:${c.color}"></i>${c.count} ${c.count === 1 ? 'pieza' : 'piezas'}</span>`).join('');
+    if (pc.colors.length < pc.total) {
+      warn.push(['alert', `Tu figura tiene ${pc.total} colores y se juntan en ${pc.colors.length}: se eligen los que más espacio ocupan y más se distinguen, y cada color se cambia por el más parecido. Revisa la muestra de arriba.`]);
+    }
+    warn.push(['', 'En tu programa de impresión, asigna un filamento a cada parte (cada parte es un color).']);
+  }
+  if (info.floating) {
+    warn.push(['alert', info.floating === 1
+      ? 'Tu figura tiene una parte que flota (no toca la base ni otra pieza): se imprime suelta o necesita soportes.'
+      : `Tu figura tiene ${info.floating} partes que flotan (no tocan la base ni otra pieza): se imprimen sueltas o necesitan soportes.`]);
+  }
+  if (info.stickers) {
+    warn.push(['alert', `Las calcomanías (${info.stickers}) no salen: son planas, sin grosor. Si quieres que se impriman, hazlas con cubos.`]);
+  }
+  if (Math.max(w, h, d) > 250) warn.push(['alert', 'La figura mide más de 25 cm: puede no caber en tu impresora. Prueba un cubo más chico.']);
+  if (Math.min(w, h, d) < 10) warn.push(['alert', 'La figura queda muy chica: los detalles pueden perderse. Prueba un cubo más grande.']);
+  warn.push(['', color
+    ? 'La opacidad y el brillo no se guardan; sólo el color de cada pieza.'
+    : 'Sale de un solo color: los colores, la opacidad y el brillo no se guardan.']);
+  warn.push(['', 'Las partes delgadas, salientes o que cuelgan pueden necesitar soportes; actívalos en tu programa de impresión.']);
+  warn.push(['', 'Donde una pieza se mete en otra (esferas, piezas deformadas), las formas quedan encimadas; normalmente tu programa de impresión las une solo.']);
+  $('#print-warn').innerHTML = warn.map(([c, t]) => `<li${c ? ` class="${c}"` : ''}>${t}</li>`).join('');
+}
+$('#btn-download-stl').addEventListener('click', () => {
+  if (!editor.model.count) { toast('Agrega al menos una pieza para exportar', 'error'); return; }
+  $('#print-agree').checked = false;
+  $('#print-download').disabled = true;
+  syncPrintDialog();
+  $('#print-dialog').showModal();
+});
+for (const [sel, attr, key, num] of [['#print-mm', 'mm', 'printMm', true], ['#print-type', 'type', 'printType', false], ['#print-max', 'max', 'printMax', true]]) {
+  $(sel).addEventListener('click', (e) => {
+    const b = e.target.closest(`[data-${attr}]`);
+    if (!b) return;
+    prefs[key] = num ? Number(b.dataset[attr]) : b.dataset[attr];
+    store.savePrefs(prefs);
+    syncPrintDialog();
+  });
+}
+$('#print-agree').addEventListener('change', (e) => { $('#print-download').disabled = !e.target.checked; });
+$('#print-download').addEventListener('click', async () => {
+  try {
+    const { mm, type, max } = printOpts();
+    const file = slugify(current.name);
+    if (type === '3mf') download(export3MF(editor.model, mm, max || Infinity, current.name), `${file}.3mf`);
+    else download(await exportSTL(editor.model, mm), `${file}.stl`);
+    $('#print-dialog').close();
+  } catch (err) {
+    console.error(err);
+    toast('No se pudo exportar para impresión 3D', 'error');
   }
 });
 $('#btn-download-json').addEventListener('click', () => {

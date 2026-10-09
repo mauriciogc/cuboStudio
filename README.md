@@ -3,7 +3,8 @@
 Editor de figuras hechas de cubos (vóxeles) al estilo *Pokémon Quest* y *Crossy Road*, hecho con
 Three.js + Vite, sin frameworks. Todo corre en el navegador y se guarda solo.
 
-**Pruébalo:** https://mauriciogc.github.io/cuboStudio/ · **Guía completa con imágenes:** https://mauriciogc.github.io/cuboStudio/guia/
+- **Pruébalo:** [mauriciogc.github.io/cuboStudio](https://mauriciogc.github.io/cuboStudio/)
+- **Guía completa con imágenes:** [mauriciogc.github.io/cuboStudio/guia](https://mauriciogc.github.io/cuboStudio/guia/)
 
 ```bash
 npm install
@@ -147,6 +148,11 @@ Sale cuando no estás creando ni editando piezas (es lo de toda la figura).
   - Fondo transparente o de color, sombra opcional, de 512 a 2048 px; también copiar al portapapeles.
   - Modelo 3D `.glb`.
   - Proyecto `.json`.
+  - **Imprimir en 3D (experimental):** `.stl` de un solo color o `.3mf` a color (una parte cerrada por color,
+    juntas como una sola figura), en milímetros (cubo de 2, 5 o 10 mm), de pie sobre la cama. A color se
+    puede limitar a 8 o 4 colores según los filamentos: se eligen los que más espacio ocupan y más se
+    distinguen. Antes de descargar muestra la medida, la muestra de colores y los avisos (partes que
+    flotan, calcomanías que no salen, soportes) y pide confirmar que se entiende que no está garantizado.
 - **Importar:** un `.json` con el botón o arrastrándolo a la ventana.
 - **Deshacer / rehacer:** Ctrl+Z y Ctrl+Shift+Z (300 pasos). **Ctrl+S** guarda al momento.
 
@@ -220,7 +226,7 @@ Cada ejemplo se descarga sólo cuando hace falta.
 | `src/sun-gizmo.js` | Sol arrastrable para orientar la luz |
 | `src/deform-tool.js` | Deformar y Extruir caras de cubos y bloques (manijas e imanes) |
 | `src/stage.js` | Renderer, cámara, luces, piso, fondos y vistas |
-| `src/exporter.js` | PNG (pantalla o recortado), GLB y miniaturas |
+| `src/exporter.js` | PNG (pantalla o recortado), GLB, STL y 3MF para impresión 3D y miniaturas |
 | `src/stickers.js` | Calcomanías: diseños en canvas, texturas y colocación por cara |
 | `src/references.js` | Imágenes guía |
 | `src/workplane.js` | Plano del Espacio 3D |

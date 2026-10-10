@@ -716,3 +716,27 @@ kbd {
 .print-ok { margin: 18px 0 4px; font-weight: 700; }
 .print-actions { justify-content: flex-end; margin: 12px 0 0; }
 @media (max-width: 560px) { .print-facts > div { grid-template-columns: 1fr; gap: 0; } }
+
+/* ---------- importar .pdo (convertir a cubos) ---------- */
+.pdo-body { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; padding: 16px 20px 18px; overflow-y: auto; }
+.pdo-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface-2); border-radius: 14px; padding: 12px; }
+.pdo-preview canvas { width: 100%; max-width: 520px; aspect-ratio: 1; height: auto; }
+.pdo-preview.busy canvas { opacity: 0.4; transition: opacity 0.15s; }
+.pdo-count { margin: 6px 0 0; font-size: 13px; font-weight: 800; color: var(--muted); }
+.pdo-options .field-label { display: block; margin: 14px 0 6px; font-size: 14px; font-weight: 800; }
+.pdo-options .field-label .muted { font-weight: 600; }
+.pdo-options .chips { grid-template-columns: repeat(3, 1fr); }
+.pdo-options .chips.two { grid-template-columns: repeat(2, 1fr); }
+.pdo-options .chips.five { grid-template-columns: repeat(5, 1fr); }
+.pdo-options .chips.four { grid-template-columns: repeat(4, 1fr); }
+.pdo-file { margin: 0 0 10px; font-weight: 800; word-break: break-word; }
+.pdo-parts { display: flex; flex-wrap: wrap; gap: 8px; }
+.pdo-part {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 84px; padding: 6px;
+  border: 2px solid var(--border); border-radius: 10px; background: var(--surface); cursor: pointer; font-size: 11px; font-weight: 800; color: var(--muted);
+}
+.pdo-part img { width: 68px; height: 68px; border-radius: 6px; object-fit: cover; }
+.pdo-part input { position: absolute; top: 6px; left: 6px; width: 16px; height: 16px; accent-color: var(--accent); }
+.pdo-part:has(input:checked) { border-color: var(--accent); }
+.pdo-part:not(:has(input:checked)) img { opacity: 0.35; filter: grayscale(1); }
+@media (max-width: 760px) { .pdo-body { grid-template-columns: 1fr; } }

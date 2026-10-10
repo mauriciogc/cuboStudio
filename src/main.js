@@ -1117,6 +1117,7 @@ $('#btn-download-json').addEventListener('click', () => {
 
 // Importar
 async function importFile(file) {
+  if (/\.pdo$/i.test(file.name)) { openPdo(file); return; }
   try {
     const data = JSON.parse(await file.text());
     const model = VoxelModel.deserialize(data);
@@ -1127,6 +1128,103 @@ async function importFile(file) {
     toast('Ese archivo no es una figura de CuboStudio', 'error');
   }
 }
+
+// Importar un .pdo de Pepakura (experimental): se convierte a cubos con vista previa
+const pdoState = { lib: null, pdo: null, name: '', parts: [], skip: new Set(), result: null, timer: 0 };
+const pdoOpts = () => ({
+  cubes: [16, 24, 32, 48, 64].includes(prefs.pdoCubes) ? prefs.pdoCubes : 32,
+  colors: [1, 16, 24, 32].includes(prefs.pdoColors) ? prefs.pdoColors : 24,
+  fill: !!prefs.pdoFill,
+  style: ['cubes', 'boxes', 'blocks'].includes(prefs.pdoStyle) ? prefs.pdoStyle : 'cubes',
+});
+async function openPdo(file) {
+  try {
+    toast('Leyendo el .pdo…');
+    // El lector de .pdo se carga sólo cuando hace falta (no pesa al abrir la app)
+    const lib = pdoState.lib ??= await import('./pdo.js');
+    const pdo = await lib.parsePDO(await file.arrayBuffer());
+    Object.assign(pdoState, { pdo, name: file.name.replace(/\.pdo$/i, '').slice(0, 40), parts: lib.pdoParts(pdo), skip: new Set(), result: null });
+    $('#pdo-file').textContent = file.name;
+    $('#pdo-parts').innerHTML = pdoState.parts.map((p) => `
+      <label class="pdo-part" title="${p.faces} caras">
+        <input type="checkbox" data-mat="${p.mat}" checked />
+        <img src="${lib.partThumb(p.material)}" alt="" />
+        <span>${p.faces} caras</span>
+      </label>`).join('');
+    $('#pdo-dialog').showModal();
+    syncPdoDialog();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'No se pudo leer ese .pdo', 'error');
+  }
+}
+function syncPdoDialog() {
+  const { cubes, colors, fill, style } = pdoOpts();
+  markChips('#pdo-style', 'style', style);
+  markChips('#pdo-cubes', 'cubes', cubes);
+  $('#pdo-fill').hidden = style !== 'cubes';
+  $('#pdo-fill-label').hidden = style !== 'cubes';
+  markChips('#pdo-colors', 'colors', colors);
+  markChips('#pdo-fill', 'fill', fill ? 1 : 0);
+  // Recalcular un momento después (las opciones pueden cambiar seguido)
+  $('.pdo-preview').classList.add('busy');
+  clearTimeout(pdoState.timer);
+  pdoState.timer = setTimeout(() => {
+    const { lib, pdo, skip } = pdoState;
+    let res;
+    let detail = '';
+    if (style === 'cubes') {
+      // Cubos: los vecinos del mismo color se juntan en cajas (menos piezas, mismo aspecto)
+      const vox = lib.voxelizePDO(pdo, { cubes, maxColors: colors, fill, skip, grids: GRID_SIZES });
+      res = {
+        size: vox.size,
+        pieces: lib.mergeCells(vox.cells).map(({ cell, size, color }) => ({
+          cell,
+          color,
+          value: size.every((v) => v === 1) ? color : `${color}/cube/2/0/${size.join(',')}`,
+          corners: Array.from({ length: 8 }, (_, i) => [0, 1, 2].map((a) => cell[a] + ((i >> a) & 1) * size[a])),
+        })),
+      };
+      if (vox.cells.size) detail = ` (de ${vox.cells.size.toLocaleString('es')} cubos)`;
+    } else {
+      res = lib.piecesPDO(pdo, { cubes, maxColors: colors, skip, style, grids: GRID_SIZES });
+    }
+    pdoState.result = res;
+    const n = res.pieces.length;
+    lib.drawPreview($('#pdo-canvas'), res.pieces);
+    $('#pdo-count').textContent = n
+      ? `${n.toLocaleString('es')} piezas${detail} · cuadrícula ${res.size}`
+      : 'Elige al menos una parte';
+    $('#pdo-create').disabled = !n;
+    $('.pdo-preview').classList.remove('busy');
+  }, 60);
+}
+for (const [sel, attr, key] of [['#pdo-cubes', 'cubes', 'pdoCubes'], ['#pdo-colors', 'colors', 'pdoColors'], ['#pdo-fill', 'fill', 'pdoFill'], ['#pdo-style', 'style', 'pdoStyle']]) {
+  $(sel).addEventListener('click', (e) => {
+    const b = e.target.closest(`[data-${attr}]`);
+    if (!b) return;
+    prefs[key] = attr === 'fill' ? b.dataset.fill === '1' : attr === 'style' ? b.dataset.style : Number(b.dataset[attr]);
+    store.savePrefs(prefs);
+    syncPdoDialog();
+  });
+}
+$('#pdo-parts').addEventListener('change', (e) => {
+  const mat = Number(e.target.dataset.mat);
+  if (e.target.checked) pdoState.skip.delete(mat); else pdoState.skip.add(mat);
+  syncPdoDialog();
+});
+$('#pdo-create').addEventListener('click', () => {
+  const res = pdoState.result;
+  if (!res?.pieces?.length) return;
+  const model = new VoxelModel(res.size);
+  // Varias piezas pueden empezar en la misma celda (freeKey les da su lugar)
+  for (const p of res.pieces) if (model.inBounds(...p.cell)) model.voxels.set(model.freeKey(p.cell), p.value);
+  $('#pdo-dialog').close();
+  createModel(pdoState.name, model);
+  toast(`"${pdoState.name}" convertida a ${model.count.toLocaleString('es')} piezas`);
+  pdoState.pdo = null;
+});
+$('#pdo-dialog').addEventListener('close', () => { clearTimeout(pdoState.timer); });
 
 $('#btn-import').addEventListener('click', () => $('#file-input').click());
 $('#file-input').addEventListener('change', (e) => {

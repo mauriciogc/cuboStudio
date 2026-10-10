@@ -309,6 +309,64 @@
       </div>
     </dialog>
 
+    <!-- Importar un .pdo de Pepakura: convertir a cubos -->
+    <dialog id="pdo-dialog" class="modal wide">
+      <header>
+        <h2>Convertir a cubos</h2>
+        <span class="exp-badge">Experimental</span>
+        <span class="spacer"></span>
+        <button class="btn icon" data-close data-icon="x" aria-label="Cerrar"></button>
+      </header>
+      <div class="pdo-body">
+        <div class="pdo-preview">
+          <canvas id="pdo-canvas" width="520" height="520"></canvas>
+          <p class="pdo-count" id="pdo-count"></p>
+        </div>
+        <div class="pdo-options">
+          <p class="pdo-file" id="pdo-file"></p>
+          <div class="print-exp"><span data-icon="flask"></span><p><b>Esta función es experimental.</b> Lee archivos de Pepakura (.pdo, versión 3). Los detalles finos de la textura se simplifican al pasar a cubos.</p></div>
+
+          <span class="field-label">Estilo</span>
+          <div class="chips" id="pdo-style" role="radiogroup" aria-label="Estilo">
+            <button class="chip" role="radio" data-style="cubes" data-tip="Cubos" data-desc="Cubitos iguales con el color de la textura. Es lo más fiel a la figura." data-tip-delay="300">Cubos</button>
+            <button class="chip" role="radio" data-style="boxes" data-tip="Cajas por pieza" data-desc="Una caja recta por cada pieza de papel. Pocas piezas, fáciles de editar." data-tip-delay="300">Cajas</button>
+            <button class="chip" role="radio" data-style="blocks" data-tip="Bloques" data-desc="Una caja chueca (deformada) por pieza de papel: un estilo low-poly, más abstracto." data-tip-delay="300">Bloques</button>
+          </div>
+
+          <span class="field-label">Tamaño <span class="muted small">(cubos del lado más largo)</span></span>
+          <div class="chips five" id="pdo-cubes" role="radiogroup" aria-label="Tamaño">
+            <button class="chip" role="radio" data-cubes="16">16</button>
+            <button class="chip" role="radio" data-cubes="24">24</button>
+            <button class="chip" role="radio" data-cubes="32">32</button>
+            <button class="chip" role="radio" data-cubes="48">48</button>
+            <button class="chip" role="radio" data-cubes="64">64</button>
+          </div>
+
+          <span class="field-label">Partes <span class="muted small">(quita lo que no quieras, p. ej. un logo o una base)</span></span>
+          <div class="pdo-parts" id="pdo-parts"></div>
+
+          <span class="field-label">Colores</span>
+          <div class="chips four" id="pdo-colors" role="radiogroup" aria-label="Colores">
+            <button class="chip" role="radio" data-colors="1" data-tip="Un solo color" data-desc="Sólo la forma, en un tono neutro, para pintarla tú." data-tip-delay="300">1</button>
+            <button class="chip" role="radio" data-colors="16">16</button>
+            <button class="chip" role="radio" data-colors="24">24</button>
+            <button class="chip" role="radio" data-colors="32">32</button>
+          </div>
+
+          <span class="field-label" id="pdo-fill-label">Por dentro</span>
+          <div class="chips two" id="pdo-fill" role="radiogroup" aria-label="Por dentro">
+            <button class="chip" role="radio" data-fill="0">Hueca</button>
+            <button class="chip" role="radio" data-fill="1">Rellena</button>
+          </div>
+
+          <div class="row print-actions">
+            <button class="btn" data-close>Cancelar</button>
+            <button class="btn primary" id="pdo-create" data-icon="plus"><span>Crear figura</span></button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
     <!-- Imprimir en 3D (STL): avisos y medidas antes de descargar -->
     <dialog id="print-dialog" class="modal">
       <header>
@@ -427,7 +485,7 @@
       </div>
     </dialog>
 
-    <input type="file" id="file-input" accept=".json,application/json" hidden />
+    <input type="file" id="file-input" accept=".json,application/json,.pdo" hidden />
     <input type="file" id="ref-file" accept="image/*" hidden />
     <div class="toasts" id="toasts"></div>
     <div class="drop-overlay" id="drop-overlay">Suelta un .json o una imagen guía</div>
